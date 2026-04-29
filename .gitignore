@@ -1,0 +1,77 @@
+# ==============================================
+# 激光除草项目专用 .gitignore (自动忽略大文件)
+# ==============================================
+
+# Python 虚拟环境（超级大，必须忽略）
+.venv/
+venv/
+env/
+ENV/
+
+# Python 编译缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 项目运行时文件（日志、上传文件）
+logs/
+log/
+uploads/
+*.log
+tmp/
+temp/
+
+# 环境变量（密码、密钥，绝对不能上传）
+.env
+.env.local
+.env.*.local
+config.ini
+settings.ini
+
+# 前端项目（如果有 Vue/React）
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.nuxt/
+frontend/.next/
+
+# 编辑器/系统垃圾文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 模型权重/大文件（如果你有模型文件）
+*.pt
+*.pth
+*.h5
+*.onnx
+*.weights
+model/
+models/
+checkpoints/
+
+# 数据库临时文件
+*.sql
+*.db
+*.sqlite3
