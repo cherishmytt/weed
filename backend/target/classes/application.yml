@@ -1,0 +1,45 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: laser-weeding-robot
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/laser_weeding?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+jwt:
+  secret: laser-weeding-robot-secret-key-change-in-production
+  expiration: 86400000  # 1天过期
+
+file:
+  storage:
+    base-path: c:/Users/20373/Desktop/1/uploads
+    url-prefix: /files/**
+
+logging:
+  level:
+    com.lwr: debug
+
+# YOLO 模型推理配置
+app:
+  model:
+    python-executable: C:/Python314/python.exe
+    script-path: c:/Users/20373/Desktop/1/backend/src/main/python/infer_weed_pose.py
+    weight-path: c:/Users/20373/Desktop/1/newyolo/runs/cnw_crop_weed_pose/weights/best.pt
+    output-root: c:/Users/20373/Desktop/1/uploads/yolo
+    classes: ""  # 留空 = 检测所有类别（0=Crop作物，1=Weed杂草）
+    imgsz: 640
