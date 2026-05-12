@@ -272,11 +272,10 @@ const handleLogin = async () => {
       ElMessage.success('登录成功');
       router.push('/dashboard');
     } else {
-      ElMessage.error(res.message || '登录失败');
+      ElMessage.error(res.message || '用户名或密码错误');
     }
   } catch (e) {
     console.error(e);
-    ElMessage.error('登录失败，请检查用户名和密码');
   } finally {
     loading.value = false;
   }
@@ -308,11 +307,6 @@ const handleRegister = async () => {
     }
   } catch (e) {
     console.error(e);
-    if (e.response && e.response.data) {
-      ElMessage.error(e.response.data.message || '注册失败，请稍后重试');
-    } else {
-      ElMessage.error('注册失败，请稍后重试');
-    }
   } finally {
     loading.value = false;
   }
@@ -638,20 +632,20 @@ const handleRegister = async () => {
   width: 100%;
   min-height: 54px;
   margin-top: 8px;
-  border: 0;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #64d8ff 0%, #4d93ff 54%, #ffb66c 100%);
-  color: #07121d;
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, #64d8ff 0%, #4d93ff 58%, #ffb66c 120%) !important;
+  color: #08131f !important;
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  box-shadow:
-    0 16px 34px rgba(42, 108, 255, 0.24),
-    0 10px 22px rgba(255, 161, 80, 0.14);
+  box-shadow: 0 8px 28px rgba(77, 147, 255, 0.35) !important;
 }
 
 .submit-btn:hover {
-  filter: brightness(1.03);
+  background: linear-gradient(135deg, #64d8ff 0%, #4d93ff 58%, #ffb66c 120%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 36px rgba(77, 147, 255, 0.45) !important;
 }
 
 .access-panel :deep(input:-webkit-autofill),

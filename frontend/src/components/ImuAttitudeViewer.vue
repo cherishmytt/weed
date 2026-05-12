@@ -1,88 +1,131 @@
 <template>
   <div class="imu-attitude-container">
-    <div class="attitude-display">
-      <!-- 人工地平仪 -->
-      <div class="artificial-horizon" :style="{ transform: `rotate(${roll}deg)` }">
-        <div class="horizon-circle">
-          <div class="horizon-line" :style="{ transform: `translateY(${-pitch * 2}px)` }"></div>
-          <div class="horizon-scale">
-            <div v-for="i in 12" :key="i" class="scale-mark" :style="{ transform: `rotate(${i * 30}deg)` }"></div>
+    <!-- 左侧：机器人 + 角度显示 -->
+    <div class="left-panel">
+      <!-- 机器人模型 -->
+      <div class="robot-3d-container">
+        <div class="robot-scene" :style="sceneTransform">
+          <!-- 地面参考线 -->
+          <div class="ground-reference">
+            <div class="ground-line"></div>
+            <div class="ground-grid">
+              <div v-for="i in 5" :key="'h'+i" class="grid-line horizontal" :style="{ top: `${(i - 3) * 20}px` }"></div>
+              <div v-for="i in 5" :key="'v'+i" class="grid-line vertical" :style="{ left: `${(i - 3) * 20}px` }"></div>
+            </div>
           </div>
-          <div class="center-mark"></div>
+          
+          <!-- 机器人模型 -->
+          <div class="robot-model">
+            <div class="robot-body">
+              <div class="lidar">
+                <div class="lidar-ring"></div>
+                <div class="lidar-dot"></div>
+              </div>
+              <div class="main-body">
+                <div class="body-top"></div>
+                <div class="body-center"></div>
+                <div class="body-bottom"></div>
+              </div>
+              <div class="sensor-left"></div>
+              <div class="sensor-right"></div>
+            </div>
+            <div class="wheel wheel-front-left"></div>
+            <div class="wheel wheel-front-right"></div>
+            <div class="wheel wheel-back-left"></div>
+            <div class="wheel wheel-back-right"></div>
+            <div class="direction-arrow"></div>
+          </div>
         </div>
       </div>
       
-      <!-- 加速度数据 -->
-      <div class="imu-data" v-if="imu.accel || imu.gyro || imu.mag">
-        <!-- 加速度 -->
-        <div class="data-section" v-if="imu.accel">
-          <div class="section-title">加速度</div>
-          <div class="data-grid">
-            <div class="data-item">
-              <span class="data-label">X:</span>
-              <span class="data-value">{{ (imu.accel.x || 0).toFixed(2) }} m/s²</span>
-            </div>
-            <div class="data-item">
-              <span class="data-label">Y:</span>
-              <span class="data-value">{{ (imu.accel.y || 0).toFixed(2) }} m/s²</span>
-            </div>
-            <div class="data-item">
-              <span class="data-label">Z:</span>
-              <span class="data-value">
-                {{ (imu.accel.z || 0).toFixed(2) }} m/s²
-                <span class="g-label">G</span>
-                <el-icon v-if="isGravityStable" class="stable-icon"><Check /></el-icon>
-              </span>
-            </div>
+      <!-- 角度显示 -->
+      <div class="angle-display-container">
+        <div class="angle-item">
+          <span class="angle-label">横滚角</span>
+          <span class="angle-value roll">{{ roll.toFixed(1) }}°</span>
+        </div>
+        <div class="angle-item">
+          <span class="angle-label">俯仰角</span>
+          <span class="angle-value pitch">{{ pitch.toFixed(1) }}°</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 右侧：数据面板 -->
+    <div class="data-panel" v-if="imu.accel || imu.gyro || imu.mag">
+      <!-- 加速度卡片 -->
+      <div class="data-card accel-card" v-if="imu.accel">
+        <div class="card-header">
+          <span class="card-title">加速度</span>
+        </div>
+        <div class="card-grid">
+          <div class="axis-item">
+            <span class="axis-label">X</span>
+            <span class="axis-value">{{ (imu.accel.x || 0).toFixed(2) }}</span>
+            <span class="axis-unit">m/s²</span>
+          </div>
+          <div class="axis-item">
+            <span class="axis-label">Y</span>
+            <span class="axis-value">{{ (imu.accel.y || 0).toFixed(2) }}</span>
+            <span class="axis-unit">m/s²</span>
+          </div>
+          <div class="axis-item">
+            <span class="axis-label">Z</span>
+            <span class="axis-value">{{ (imu.accel.z || 0).toFixed(2) }}</span>
+            <span class="axis-unit">m/s²</span>
           </div>
         </div>
-        
-        <!-- 角速度 -->
-        <div class="data-section" v-if="imu.gyro">
-          <div class="section-title">角速度</div>
-          <div class="data-grid">
-            <div class="data-item">
-              <span class="data-label">X:</span>
-              <span class="data-value">{{ (imu.gyro.x || 0).toFixed(4) }} rad/s</span>
-            </div>
-            <div class="data-item">
-              <span class="data-label">Y:</span>
-              <span class="data-value">{{ (imu.gyro.y || 0).toFixed(4) }} rad/s</span>
-            </div>
-            <div class="data-item" v-if="typeof imu.gyro.z !== 'undefined'">
-              <span class="data-label">Z:</span>
-              <span class="data-value">{{ (imu.gyro.z || 0).toFixed(4) }} rad/s</span>
-            </div>
+      </div>
+      
+      <!-- 角速度卡片 -->
+      <div class="data-card gyro-card" v-if="imu.gyro">
+        <div class="card-header">
+          <span class="card-title">角速度</span>
+        </div>
+        <div class="card-grid">
+          <div class="axis-item">
+            <span class="axis-label">X</span>
+            <span class="axis-value">{{ (imu.gyro.x || 0).toFixed(4) }}</span>
+            <span class="axis-unit">rad/s</span>
+          </div>
+          <div class="axis-item">
+            <span class="axis-label">Y</span>
+            <span class="axis-value">{{ (imu.gyro.y || 0).toFixed(4) }}</span>
+            <span class="axis-unit">rad/s</span>
+          </div>
+          <div class="axis-item" v-if="typeof imu.gyro.z !== 'undefined'">
+            <span class="axis-label">Z</span>
+            <span class="axis-value">{{ (imu.gyro.z || 0).toFixed(4) }}</span>
+            <span class="axis-unit">rad/s</span>
           </div>
         </div>
-        
-        <!-- 磁场 -->
-        <div class="data-section" v-if="imu.mag">
-          <div class="section-title">磁场</div>
-          <div class="data-grid">
-            <div class="data-item">
-              <span class="data-label">X:</span>
-              <span class="data-value">{{ (imu.mag.x || 0).toFixed(2) }}</span>
-            </div>
-            <div class="data-item">
-              <span class="data-label">Y:</span>
-              <span class="data-value">{{ (imu.mag.y || 0).toFixed(2) }}</span>
-            </div>
-            <div class="data-item">
-              <span class="data-label">Z:</span>
-              <span class="data-value">{{ (imu.mag.z || 0).toFixed(2) }}</span>
-            </div>
+      </div>
+      
+      <!-- 磁场卡片 -->
+      <div class="data-card mag-card" v-if="imu.mag">
+        <div class="card-header">
+          <div class="card-icon mag-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
           </div>
+          <span class="card-title">磁场</span>
         </div>
-        
-        <!-- 温度 -->
-        <div class="data-section" v-if="typeof imu.temp === 'number'">
-          <div class="section-title">温度</div>
-          <div class="data-grid">
-            <div class="data-item">
-              <span class="data-label">IMU:</span>
-              <span class="data-value">{{ imu.temp.toFixed(1) }}°C</span>
-            </div>
+        <div class="card-grid">
+          <div class="axis-item">
+            <span class="axis-label">X</span>
+            <span class="axis-value">{{ (imu.mag.x || 0).toFixed(2) }}</span>
+            <span class="axis-unit">μT</span>
+          </div>
+          <div class="axis-item">
+            <span class="axis-label">Y</span>
+            <span class="axis-value">{{ (imu.mag.y || 0).toFixed(2) }}</span>
+            <span class="axis-unit">μT</span>
+          </div>
+          <div class="axis-item">
+            <span class="axis-label">Z</span>
+            <span class="axis-value">{{ (imu.mag.z || 0).toFixed(2) }}</span>
+            <span class="axis-unit">μT</span>
           </div>
         </div>
       </div>
@@ -92,7 +135,6 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Check } from '@element-plus/icons-vue'
 
 const props = defineProps({
   imu: {
@@ -101,236 +143,384 @@ const props = defineProps({
   }
 })
 
-// 计算属性
 const roll = computed(() => props.imu?.roll || 0)
 const pitch = computed(() => props.imu?.pitch || 0)
 
-const isGravityStable = computed(() => {
-  if (!props.imu?.accel) return true
-  const az = Math.abs(props.imu.accel.z || 0)
-  return az > 9 && az < 10.5 // 重力加速度约 9.8 m/s²
-})
+const sceneTransform = computed(() => ({
+  transform: `rotateX(${-pitch.value}deg) rotateZ(${roll.value}deg)`
+}))
 </script>
 
 <style scoped>
 .imu-attitude-container {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  gap: 24px;
 }
 
-.attitude-display {
+.left-panel {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
+  flex: 0 0 180px;
+  gap: 8px;
+  padding-top: 16px;
+}
+
+/* 角度显示容器 */
+.angle-display-container {
+  display: flex;
   gap: 16px;
   justify-content: center;
+  width: 100%;
 }
 
-/* 人工地平仪 */
-.artificial-horizon {
-  width: 120px;
-  height: 120px;
+.angle-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  min-width: 70px;
+}
+
+.angle-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.angle-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--font-family);
+  letter-spacing: -0.3px;
+}
+
+.angle-value.roll {
+  color: #59d6ff;
+  text-shadow: 0 0 8px rgba(89, 214, 255, 0.4);
+}
+
+.angle-value.pitch {
+  color: #39d398;
+  text-shadow: 0 0 8px rgba(57, 211, 152, 0.4);
+}
+
+/* 3D 机器人容器 */
+.robot-3d-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.robot-scene {
+  width: 180px;
+  height: 180px;
+  perspective: 500px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.3s ease;
+  transition: transform 0.1s ease-out;
 }
 
-.horizon-circle {
-  width: 100px;
-  height: 100px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  position: relative;
-  background: linear-gradient(to bottom, var(--primary-color) 0%, var(--primary-color) 50%, var(--success-color) 50%, var(--success-color) 100%);
-  overflow: hidden;
+/* 地面参考 */
+.ground-reference {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  pointer-events: none;
 }
 
-.horizon-line {
+.ground-line {
   position: absolute;
   top: 50%;
   left: 0;
   right: 0;
   height: 2px;
-  background: #fff;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
-  transition: transform 0.3s ease;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
 }
 
-.horizon-scale {
+.ground-grid {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 80px;
+  height: 80px;
+  transform: translate(-50%, -50%);
+}
+
+.grid-line {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.grid-line.horizontal {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.grid-line.vertical {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+/* 机器人模型 */
+.robot-model {
+  position: relative;
+  width: 100px;
+  height: 80px;
+  transform-style: preserve-3d;
+  transition: transform 0.1s ease-out;
+}
+
+.robot-body {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 38px;
+}
+
+.lidar {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 25px;
+  height: 10px;
+}
+
+.lidar-ring {
+  width: 100%;
+  height: 8px;
+  border: 2px solid #4FC3F7;
+  border-radius: 50%;
+  background: rgba(79, 195, 247, 0.25);
+}
+
+.lidar-dot {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 5px;
+  height: 5px;
+  background: #4FC3F7;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  box-shadow: 0 0 5px #4FC3F7;
+}
+
+.main-body {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 45px;
+  height: 25px;
+}
+
+.body-top {
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-
-.scale-mark {
-  position: absolute;
-  top: 50%;
   left: 50%;
-  width: 2px;
-  height: 12px;
-  background: #fff;
-  transform-origin: top center;
-  transform: translate(-50%, -50%) rotate(0deg);
-}
-
-.center-mark {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
+  transform: translateX(-50%);
+  width: 40px;
   height: 8px;
-  background: #fff;
-  border: 2px solid #333;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
+  background: linear-gradient(135deg, #66BB6A 0%, #43A047 100%);
+  border-radius: 3px 3px 0 0;
 }
 
-/* IMU 数据 */
-.imu-data {
+.body-center {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 45px;
+  height: 10px;
+  background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+}
+
+.body-bottom {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 7px;
+  background: linear-gradient(135deg, #388E3C 0%, #2E7D32 100%);
+  border-radius: 0 0 3px 3px;
+}
+
+.sensor-left,
+.sensor-right {
+  position: absolute;
+  top: 15px;
+  width: 8px;
+  height: 15px;
+  background: #78909C;
+  border-radius: 2px;
+}
+
+.sensor-left { left: -10px; }
+.sensor-right { right: -10px; }
+
+.wheel {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  background: linear-gradient(90deg, #37474F 0%, #263238 50%, #1A237E 100%);
+  border-radius: 50%;
+  border: 2px solid #546E7A;
+}
+
+.wheel-front-left { top: 45px; left: 10px; }
+.wheel-front-right { top: 45px; right: 10px; }
+.wheel-back-left { top: 58px; left: 10px; }
+.wheel-back-right { top: 58px; right: 10px; }
+
+.direction-arrow {
+  position: absolute;
+  top: 23px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 10px solid #FFC107;
+}
+
+/* 右侧数据面板 */
+.data-panel {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  max-width: 280px;
+  gap: 12px;
+  min-width: 0;
 }
 
-.data-section {
-  background: rgba(255, 255, 255, 0.05);
+/* 数据卡片 */
+.data-card {
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 12px;
-  padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
 }
 
-.section-title {
-  font-size: 12px;
+.card-header {
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.card-title {
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-  text-align: center;
+  color: var(--text-secondary);
   font-family: var(--font-family);
 }
 
-.data-grid {
+.card-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  gap: 8px;
 }
 
-.data-item {
+.axis-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  font-size: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  padding: 8px 6px;
+  background: transparent;
+  border-radius: 0;
+  min-height: 55px;
+  justify-content: center;
 }
 
-.data-label {
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin-bottom: 2px;
-  font-size: 11px;
-  font-family: var(--font-family);
-}
-
-.data-value {
+.axis-label {
+  font-size: 13px;
   font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  letter-spacing: 0.3px;
+}
+
+.axis-value {
+  font-size: 22px;
+  font-weight: 700;
   color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 12px;
   font-family: var(--font-family);
+  letter-spacing: -0.3px;
+  line-height: 1.1;
 }
 
-.g-label {
-  font-size: 10px;
+.axis-unit {
+  font-size: 11px;
   color: var(--text-tertiary);
-  font-weight: normal;
-}
-
-.stable-icon {
-  color: var(--primary-color);
-  font-size: 12px;
-}
-
-/* 人工地平仪样式调整 */
-.horizon-circle {
-  width: 100px;
-  height: 100px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  position: relative;
-  background: linear-gradient(to bottom, var(--primary-color) 0%, var(--primary-color) 50%, var(--success-color) 50%, var(--success-color) 100%);
-  overflow: hidden;
-}
-
-.horizon-line {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
-  transition: transform 0.3s ease;
-}
-
-.scale-mark {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 2px;
-  height: 12px;
-  background: rgba(255, 255, 255, 0.8);
-  transform-origin: top center;
-  transform: translate(-50%, -50%) rotate(0deg);
-}
-
-.center-mark {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 2px solid rgba(0, 0, 0, 0.3);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
+  margin-top: 3px;
+  font-weight: 500;
 }
 
 /* 响应式调整 */
 @media (max-width: 768px) {
-  .artificial-horizon {
+  .imu-attitude-container {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .left-panel {
+    flex: none;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+  }
+  
+  .angle-gauge-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .gauge-ring {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .robot-scene {
     width: 140px;
     height: 140px;
   }
   
-  .horizon-circle {
-    width: 120px;
-    height: 120px;
+  .robot-model {
+    width: 80px;
+    height: 65px;
   }
   
-  .data-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .card-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
   
-  .data-item {
-    font-size: 12px;
-    padding: 6px;
+  .axis-item {
+    padding: 8px 6px;
+    min-height: 55px;
   }
   
-  .data-value {
-    font-size: 13px;
+  .axis-value {
+    font-size: 15px;
   }
 }
 </style>

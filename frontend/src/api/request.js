@@ -28,24 +28,17 @@ service.interceptors.response.use(
   response => {
     const res = response.data
     if (res.code !== 200) {
-      ElMessage.error({
-        message: res.message || '请求失败',
-        type: 'error',
-        duration: 5000
-      })
-
-      // 401 未登录，跳转到登录页
       if (res.code === 401) {
         router.push('/login')
       }
-      return Promise.reject(new Error(res.message || '请求失败'))
+      return res
     }
     return res
   },
   error => {
     console.error('响应错误', error)
     ElMessage.error({
-      message: error.message || '网络错误',
+      message: error.message || '网络连接失败',
       type: 'error',
       duration: 5000
     })

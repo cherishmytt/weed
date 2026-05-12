@@ -119,19 +119,9 @@ select {
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--scrollbar-thumb-start), var(--scrollbar-thumb-end));
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--scrollbar-track);
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .page-shell {
@@ -201,6 +191,31 @@ select {
   box-shadow: 0 24px 56px rgba(0, 0, 0, 0.42);
 }
 
+.el-dialog__wrapper {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 1999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: auto !important;
+  background: rgba(2, 8, 15, 0.68) !important;
+}
+
+.el-dialog {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  z-index: 2000 !important;
+  margin: auto !important;
+}
+
 .el-dialog__title,
 .el-drawer__title,
 .el-message-box__title,
@@ -254,29 +269,59 @@ select {
 .el-button {
   border-radius: 14px;
   font-weight: 600;
-  border-color: transparent;
+  border-color: rgba(99, 195, 255, 0.2);
+  background: rgba(11, 29, 49, 0.6) !important;
+  backdrop-filter: blur(12px);
+  color: var(--text-primary);
+}
+
+.el-button:hover {
+  background: rgba(17, 51, 82, 0.7) !important;
+  border-color: rgba(99, 195, 255, 0.35);
+}
+
+.el-button:active {
+  background: rgba(8, 22, 37, 0.8) !important;
 }
 
 .el-button--default {
   color: var(--text-primary);
-  background: var(--bg-button-default);
-  border: 1px solid rgba(99, 195, 255, 0.14);
+  background: rgba(11, 29, 49, 0.5) !important;
+  border: 1px solid rgba(99, 195, 255, 0.18);
+  backdrop-filter: blur(10px);
 }
 
 .el-button--default:hover {
   color: var(--text-primary);
-  border-color: rgba(99, 195, 255, 0.28);
-  background: var(--bg-button-default-hover);
+  border-color: rgba(99, 195, 255, 0.35);
+  background: rgba(17, 51, 82, 0.6) !important;
 }
 
 .el-button--primary {
-  --el-button-bg-color: var(--accent-blue);
-  --el-button-border-color: var(--accent-blue);
-  --el-button-hover-bg-color: color-mix(in srgb, var(--accent-blue) 82%, white);
-  --el-button-hover-border-color: color-mix(in srgb, var(--accent-blue) 82%, white);
-  --el-button-active-bg-color: color-mix(in srgb, var(--accent-blue) 78%, black);
+  --el-button-bg-color: rgba(47, 115, 255, 0.2);
+  --el-button-border-color: rgba(64, 144, 255, 0.4);
+  --el-button-hover-bg-color: rgba(47, 115, 255, 0.3);
+  --el-button-hover-border-color: rgba(64, 144, 255, 0.6);
+  --el-button-active-bg-color: rgba(47, 115, 255, 0.15);
   --el-button-active-border-color: color-mix(in srgb, var(--accent-blue) 78%, black);
   box-shadow: 0 10px 28px rgba(27, 109, 255, 0.28);
+}
+
+.el-button--danger {
+  --el-button-bg-color: rgba(255, 93, 93, 0.15);
+  --el-button-border-color: rgba(255, 93, 93, 0.35);
+  --el-button-hover-bg-color: rgba(255, 93, 93, 0.25);
+  --el-button-hover-border-color: rgba(255, 93, 93, 0.5);
+  --el-button-active-bg-color: rgba(255, 93, 93, 0.1);
+  --el-button-active-border-color: rgba(255, 93, 93, 0.3);
+  box-shadow: none;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+}
+
+.el-button--danger:hover {
+  transform: none;
+  box-shadow: 0 4px 16px rgba(255, 93, 93, 0.2);
 }
 
 .el-radio-button__inner,
@@ -302,6 +347,25 @@ select {
   background: var(--bg-chip);
   border-color: rgba(99, 195, 255, 0.14);
   color: var(--text-primary);
+}
+
+/* 描述列表组件样式 */
+.el-descriptions {
+  color: var(--text-primary);
+}
+
+.el-descriptions__label {
+  color: #a0c8e8 !important;
+  background: rgba(89, 214, 255, 0.1) !important;
+}
+
+.el-descriptions__content {
+  color: #eaf5ff !important;
+}
+
+.el-descriptions__border,
+.el-descriptions__cell {
+  border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .el-popper,
@@ -334,26 +398,400 @@ select {
   color: var(--text-primary) !important;
 }
 
+/* ======================================
+日期选择器：单层背景，清爽无叠加
+====================================== */
+/* 1. 最外层面板底色统一，不要半透明叠加 */
+.el-picker-panel {
+  --el-picker-panel-bg-color: var(--bg-dropdown);
+  background: var(--bg-dropdown) !important;    /* 直接应用背景，不依赖变量再叠加 */
+  border: 1px solid var(--line-soft) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 20px 48px rgba(0,0,0,0.38);
+  backdrop-filter: blur(24px);
+}
+
+/* 2. 表格本身完全透明，不再提供背景 */
+.el-date-table {
+  background: transparent !important;
+}
+
+/* 表头文字 */
+.el-date-table th {
+  color: var(--text-secondary) !important;
+  font-weight: 600;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* 3. 单元格：所有 td 背景透明，只通过内部 span/div 呈现视觉 */
+.el-date-table td {
+  color: var(--text-primary) !important;
+  background: transparent !important;
+  transition: none;
+  padding: 0 !important;
+  height: 36px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  line-height: 36px !important;
+}
+
+.el-date-table td div {
+  height: 36px !important;
+  line-height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.el-date-table td span {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  line-height: 28px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* 悬浮效果：圆形背景，不与范围背景重叠 */
+.el-date-table td.available:hover span {
+  color: var(--accent-cyan);
+  background: rgba(89, 214, 255, 0.15) !important;
+  border-radius: 50% !important;
+}
+
+/* 范围中间的日期：悬停时保持透明背景，不显示圆形 */
+.el-date-table td.in-range:not(.start-date):not(.end-date):hover span {
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+/* 今天的标记：保持青色圆圈 */
+.el-date-table td.today span {
+  box-shadow: 0 0 0 1px var(--accent-cyan);
+  background: rgba(89, 214, 255, 0.18);
+  font-weight: 700;
+  color: var(--accent-cyan);
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  line-height: 28px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50%;
+}
+
+/* 4. 范围选择：胶囊样式 */
+.el-date-table td.in-range {
+  background: rgba(47, 115, 255, 0.16) !important;
+  border-radius: 0 !important;
+}
+.el-date-table td.start-date {
+  background: rgba(47, 115, 255, 0.16) !important;
+  border-radius: 50% 0 0 50% !important;
+}
+.el-date-table td.end-date {
+  background: rgba(47, 115, 255, 0.16) !important;
+  border-radius: 0 50% 50% 0 !important;
+}
+.el-date-table td.start-date.end-date {
+  border-radius: 50% !important;
+}
+
+.el-date-table td.in-range div {
+  background: transparent !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.el-date-table td.in-range:not(.start-date):not(.end-date) span {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+/* 起点和终点日期特殊处理 */
+.el-date-table td.start-date span,
+.el-date-table td.end-date span {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan)) !important;
+  color: #fff !important;
+  border-radius: 50% !important;
+  box-shadow: 0 2px 10px rgba(47, 115, 255, 0.45);
+  position: relative;
+  z-index: 2;
+}
+
+/* 单个日期选中（非范围）也做成渐变圆 */
+.el-date-table td.current:not(.in-range) span {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  line-height: 28px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan)) !important;
+  border-radius: 50% !important;
+  color: #fff !important;
+}
+
+/* 禁用日期样式 */
+.el-date-table td.disabled {
+  background: rgba(99, 195, 255, 0.03) !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+.el-date-table td.disabled span {
+  color: var(--text-tertiary) !important;
+  opacity: 0.38 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-decoration: line-through !important;
+  border-radius: 0 !important;
+}
+
+/* 6. 面板头部、快捷选项保持原样，但确保透明背景 */
+.el-picker-panel__header {
+  color: var(--text-primary) !important;
+  background: transparent !important;
+}
+.el-picker-panel__icon-btn {
+  color: var(--text-secondary) !important;
+  background: transparent !important;
+}
+.el-picker-panel__icon-btn:hover {
+  background: rgba(64, 158, 255, 0.18) !important;
+  color: var(--text-primary) !important;
+}
+.el-picker-panel__shortcut {
+  color: var(--text-secondary) !important;
+  background: transparent !important;
+}
+.el-picker-panel__shortcut:hover {
+  background: rgba(64, 158, 255, 0.18) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 月份/年表格同理 */
+.el-month-table td,
+.el-year-table td {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+}
+.el-month-table td.available:hover,
+.el-year-table td.available:hover {
+  background: rgba(64, 158, 255, 0.18) !important;
+}
+.el-month-table td.current,
+.el-year-table td.current {
+  color: var(--accent-cyan) !important;
+}
+.el-month-table td.selected,
+.el-year-table td.selected {
+  background: var(--accent-blue) !important;
+  color: #fff !important;
+}
+
+/* 时间选择器样式 */
+.el-time-panel {
+  background: var(--bg-dropdown) !important;
+}
+
+.el-time-spinner__item {
+  color: var(--text-primary) !important;
+}
+
+.el-time-spinner__item:hover {
+  background: rgba(64, 158, 255, 0.15) !important;
+}
+
+.el-time-spinner__item.active {
+  background: var(--accent-blue) !important;
+  color: white !important;
+}
+
+.el-time-panel__btn {
+  color: var(--text-secondary) !important;
+}
+
+.el-time-panel__btn:hover {
+  color: var(--text-primary) !important;
+}
+
+/* ============ 修复悬停方形 ============ */
+/* 彻底清掉 td 层的 hover 背景，只保留 span 圆圈 */
+.el-date-table td.available:hover,
+.el-date-table td:hover {
+  background: transparent !important;
+}
+.el-date-table td.available:hover span {
+  color: var(--accent-cyan) !important;
+  background: rgba(89, 214, 255, 0.15) !important;
+  border-radius: 50% !important;
+}
+/* 范围内的 td hover 不显示圆 */
+.el-date-table td.in-range:hover,
+.el-date-table td.in-range:not(.start-date):not(.end-date):hover {
+  background: rgba(47, 115, 255, 0.16) !important;
+}
+.el-date-table td.in-range:not(.start-date):not(.end-date):hover span {
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+/* ============ 禁用日期玻璃风 ============ */
+/* 覆盖 EP 白色默认背景 */
+.el-date-table td.disabled,
+.el-date-table td.disabled div {
+  background: transparent !important;
+}
+.el-date-table td.disabled span {
+  color: rgba(221, 232, 255, 0.2) !important;   /* 极淡文字 */
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 50% !important;
+  text-decoration: none !important;             /* 去掉之前加的删除线 */
+  opacity: 1 !important;                        /* 由颜色本身控制淡化 */
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+/* 禁用区域整行给一个微弱玻璃纹，不抢戏 */
+.el-date-table tr:has(td.disabled) {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(99, 195, 255, 0.03) 30%,
+    rgba(99, 195, 255, 0.03) 70%,
+    transparent
+  ) !important;
+}
+
+/* 日期选择器底部按钮 */
+.el-picker-panel__footer {
+  background: rgba(6, 19, 32, 0.96) !important;
+  border-top: 1px solid var(--line-soft) !important;
+  padding: 10px 16px !important;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.el-picker-panel__footer .el-button--text,
+.el-picker-panel__footer .el-picker-panel__btn {
+  color: var(--text-secondary) !important;
+  background: var(--bg-ghost) !important;
+  border: 1px solid var(--line-soft) !important;
+  border-radius: 14px !important;
+  padding: 6px 16px !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  cursor: pointer;
+  transition: background .18s, border-color .18s;
+}
+.el-picker-panel__footer .el-button--text:hover,
+.el-picker-panel__footer .el-picker-panel__btn:hover {
+  color: var(--text-primary) !important;
+  background: var(--interactive-hover) !important;
+  border-color: var(--line-strong) !important;
+}
+
 .el-pagination {
   --el-pagination-bg-color: transparent;
   --el-pagination-button-bg-color: var(--bg-pagination);
-  --el-pagination-button-color: var(--text-secondary);
+  --el-pagination-button-color: var(--text-primary);
   --el-pagination-button-disabled-bg-color: rgba(6, 18, 30, 0.72);
   --el-pagination-hover-color: var(--accent-cyan);
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .el-pagination.is-background .btn-next,
 .el-pagination.is-background .btn-prev,
-.el-pagination.is-background .el-pager li {
+.el-pagination.is-background .el-pager li,
+.el-pagination .btn-prev,
+.el-pagination .btn-next,
+.el-pagination .el-pager li {
   background: var(--bg-pagination);
   border: 1px solid rgba(99, 195, 255, 0.12);
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .el-pagination.is-background .el-pager li.is-active {
   background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
   color: #fff;
+}
+
+.el-pagination .el-pagination__sizes .el-select .el-input__wrapper,
+.el-pagination .el-pagination__jump .el-input__wrapper {
+  background: var(--bg-input) !important;
+  border: 1px solid rgba(99, 195, 255, 0.14) !important;
+}
+
+.el-pagination .el-pagination__sizes .el-select .el-input__inner,
+.el-pagination .el-pagination__jump .el-input__inner {
+  color: var(--text-primary) !important;
+}
+
+/* 表格组件样式增强 */
+.el-table th {
+  color: #a0c8e8 !important;
+  font-weight: 600 !important;
+}
+
+.el-table td {
+  color: #eaf5ff !important;
+}
+
+.el-table .cell {
+  color: inherit;
+}
+
+/* 抽屉组件样式 */
+.el-drawer__body {
+  color: var(--text-primary);
+}
+
+/* 消息框样式 */
+.el-message-box__content {
+  color: var(--text-primary);
+}
+
+/* 图片预览弹窗样式 */
+.el-image-viewer {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99999 !important;
+  background: rgba(0, 0, 0, 0.9) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.el-image-viewer__wrapper {
+  z-index: 99999 !important;
+}
+
+.el-image-viewer__img {
+  max-width: 90vw !important;
+  max-height: 90vh !important;
+  object-fit: contain !important;
 }
 
 .el-table {
@@ -449,4 +887,82 @@ select {
 .el-checkbox__label,
 .el-radio__label {
   color: var(--text-secondary);
+}
+
+/* 修复图片放大预览被遮挡/显示异常 - 最强力修复 */
+body > div[class*="el-image-viewer"],
+body > div[class*="el-overlay"]:has(div[class*="el-image-viewer"]),
+.el-image-viewer__wrapper,
+.el-image-viewer__mask {
+  z-index: 999999999 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.92) !important;
+  pointer-events: auto !important;
+}
+
+.el-image-viewer {
+  z-index: 999999999 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: auto !important;
+}
+
+.el-image-viewer__btn {
+  z-index: 1000000000 !important;
+  pointer-events: auto !important;
+}
+
+.el-image-viewer__img {
+  max-width: 90vw !important;
+  max-height: 90vh !important;
+  object-fit: contain !important;
+}
+
+/* 确保所有父容器不截断图片预览 */
+.records-card,
+.table-container,
+.glass-panel,
+.el-table,
+.el-table__body-wrapper,
+.el-drawer,
+.el-drawer__body {
+  overflow: visible !important;
+}
+
+.el-image,
+.el-table .el-image {
+  overflow: visible !important;
+}
+
+/* 表格父容器允许溢出，但设置合理层级 */
+.el-table__body-wrapper {
+  overflow: visible !important;
+  position: relative;
+  z-index: 1;
+}
+
+/* 抽屉内图片预览确保正确层级 */
+.el-drawer {
+  z-index: 2000 !important;
+}
+
+.el-drawer__wrapper {
+  z-index: 2000 !important;
+}
+
+/* 确保全屏地图在弹窗之下 */
+.map-wrapper.fullscreen {
+  z-index: 1000 !important;
 }

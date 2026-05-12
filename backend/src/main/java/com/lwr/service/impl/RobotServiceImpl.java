@@ -252,47 +252,54 @@ public class RobotServiceImpl implements RobotService {
 
     @Override
     public Result<List<Map<String, Object>>> exportStatusHistory(LocalDateTime startTime, LocalDateTime endTime, String keyword, Boolean laserOn,
-                                          Float maxBattery, Float minTemperature, Float minCpu, int page, int size) {
+                                          Float maxBattery, Float minTemperature, Float minCpu, List<Long> ids, int page, int size) {
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<RobotStatus> wrapper =
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
 
-        // 使用和查询相同的筛选条件
-        if (startTime != null) {
-            wrapper.ge(RobotStatus::getReportedAt, startTime);
-        }
-        if (endTime != null) {
-            wrapper.le(RobotStatus::getReportedAt, endTime);
-        }
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            // 先对经纬度进行模糊搜索
-            wrapper.and(w -> w
-                    .like(RobotStatus::getLongitude, keyword)
-                    .or()
-                    .like(RobotStatus::getLatitude, keyword)
-            );
-        }
-        if (laserOn != null) {
-            wrapper.eq(RobotStatus::getLaserOn, laserOn);
-        }
-        if (maxBattery != null) {
-            wrapper.le(RobotStatus::getBattery, maxBattery);
-        }
-        if (minTemperature != null) {
-            wrapper.ge(RobotStatus::getTemperature, minTemperature);
-        }
-        if (minCpu != null) {
-            wrapper.ge(RobotStatus::getCpuUsage, minCpu);
+        if (ids != null && !ids.isEmpty()) {
+            wrapper.in(RobotStatus::getId, ids);
+        } else {
+            if (startTime != null) {
+                wrapper.ge(RobotStatus::getReportedAt, startTime);
+            }
+            if (endTime != null) {
+                wrapper.le(RobotStatus::getReportedAt, endTime);
+            }
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                wrapper.and(w -> w
+                        .like(RobotStatus::getLongitude, keyword)
+                        .or()
+                        .like(RobotStatus::getLatitude, keyword)
+                );
+            }
+            if (laserOn != null) {
+                wrapper.eq(RobotStatus::getLaserOn, laserOn);
+            }
+            if (maxBattery != null) {
+                wrapper.le(RobotStatus::getBattery, maxBattery);
+            }
+            if (minTemperature != null) {
+                wrapper.ge(RobotStatus::getTemperature, minTemperature);
+            }
+            if (minCpu != null) {
+                wrapper.ge(RobotStatus::getCpuUsage, minCpu);
+            }
         }
 
         wrapper.orderByDesc(RobotStatus::getReportedAt);
 
-        // 查询指定数量的数据用于导出
-        com.baomidou.mybatisplus.extension.plugins.pagination.Page<RobotStatus> pageRequest =
-                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size);
-        var pageResult = robotStatusMapper.selectPage(pageRequest, wrapper);
+        List<RobotStatus> records;
+        if (ids != null && !ids.isEmpty()) {
+            records = robotStatusMapper.selectList(wrapper);
+        } else {
+            com.baomidou.mybatisplus.extension.plugins.pagination.Page<RobotStatus> pageRequest =
+                    new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size);
+            var pageResult = robotStatusMapper.selectPage(pageRequest, wrapper);
+            records = pageResult.getRecords();
+        }
 
         List<Map<String, Object>> result = new ArrayList<>();
-        for (RobotStatus status : pageResult.getRecords()) {
+        for (RobotStatus status : records) {
             result.add(formatStatusForResponse(status));
         }
 
@@ -399,6 +406,7 @@ public class RobotServiceImpl implements RobotService {
      */
     private Map<String, Object> formatStatusForResponse(RobotStatus status) {
         Map<String, Object> data = new HashMap<>();
+        data.put("id", status.getId());
         data.put("battery", status.getBattery());
         data.put("speed", status.getSpeed());
         data.put("temperature", status.getTemperature());

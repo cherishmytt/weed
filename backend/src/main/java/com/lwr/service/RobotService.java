@@ -35,9 +35,10 @@ public interface RobotService {
 
     /**
      * 导出状态历史（筛选结果）
+     * @param ids 选中记录ID列表，若不为空则只导出指定ID的记录
      */
     Result<List<Map<String, Object>>> exportStatusHistory(LocalDateTime startTime, LocalDateTime endTime, String keyword, Boolean laserOn,
-                                          Float maxBattery, Float minTemperature, Float minCpu, int page, int size);
+                                          Float maxBattery, Float minTemperature, Float minCpu, List<Long> ids, int page, int size);
 
     /**
      * 查询轨迹

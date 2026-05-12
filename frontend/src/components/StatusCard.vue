@@ -1,15 +1,15 @@
 <template>
-  <el-card class="status-card" :body-style="{ padding: '20px' }">
-    <div class="status-card-header">
-      <div class="title">{{ title }}</div>
+  <section class="glass-panel status-card" :class="{ compact }">
+    <div class="panel-header">
+      <span class="section-title">{{ title }}</span>
       <div v-if="status !== undefined" class="status-badge" :class="statusClass">
         {{ statusText }}
       </div>
     </div>
-    <div class="content">
+    <div class="panel-body">
       <slot></slot>
     </div>
-  </el-card>
+  </section>
 </template>
 
 <script setup>
@@ -23,6 +23,10 @@ const props = defineProps({
   status: {
     type: Number,
     default: undefined
+  },
+  compact: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -44,46 +48,63 @@ const statusClass = computed(() => {
 
 <style scoped>
 .status-card {
-  height: 100%;
-}
-
-.status-card-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 18px 20px;
 }
 
-.status-card-header .title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
+.status-card.compact {
+  padding: 14px 16px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 22px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--text-primary);
 }
 
 .status-badge {
   padding: 4px 12px;
-  border-radius: 12px;
+  border-radius: 999px;
   font-size: 12px;
+  font-weight: 600;
   color: #fff;
 }
 
 .status-0 {
-  background-color: #909399;
+  background: rgba(156, 163, 175, 0.8);
 }
 
 .status-1 {
-  background-color: #67c23a;
+  background: linear-gradient(135deg, var(--accent-green), var(--accent-green));
+  box-shadow: 0 4px 14px rgba(57, 211, 152, 0.3);
 }
 
 .status-2 {
-  background-color: #409eff;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  box-shadow: 0 4px 14px rgba(89, 214, 255, 0.3);
 }
 
 .status-3 {
-  background-color: #f56c6c;
+  background: linear-gradient(135deg, var(--accent-red), #d94646);
+  box-shadow: 0 4px 14px rgba(255, 93, 93, 0.3);
 }
 
-.content {
-  min-height: 80px;
+.panel-body {
+  flex: 1;
+  min-height: 0;
 }
 </style>

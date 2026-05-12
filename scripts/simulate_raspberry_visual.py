@@ -1,9 +1,12 @@
-
 #!C:\Python314\python.exe
 """
 模拟树莓派客户端
 按照通信机制与 Spring Boot 服务端进行 HTTP 通信
 使用 rich 库实现实时监控面板
+
+通信规范：
+- 上行：状态上报 5 秒一次，检测结果/激光反馈在事件发生时即时上报
+- 下行：指令轮询 1~2 秒一次，执行后通过 ACK 接口确认
 """
 
 import os
@@ -34,10 +37,10 @@ SERVER_BASE_URL = os.environ.get('RASPBERRY_SERVER_BASE_URL', 'http://localhost:
 USERNAME = os.environ.get('RASPBERRY_USERNAME', 'admin')
 PASSWORD = os.environ.get('RASPBERRY_PASSWORD', '123456')
 
-# 时间间隔配置（秒）- 测试加速版
-STATUS_INTERVAL = float(os.environ.get('RASPBERRY_STATUS_INTERVAL_SECONDS', '0.02'))
-MIN_POLL_INTERVAL = float(os.environ.get('RASPBERRY_MIN_POLL_INTERVAL_SECONDS', '0.3'))
-MAX_POLL_INTERVAL = float(os.environ.get('RASPBERRY_MAX_POLL_INTERVAL_SECONDS', '0.8'))
+# 时间间隔配置（秒）- 遵循通信规范
+STATUS_INTERVAL = float(os.environ.get('RASPBERRY_STATUS_INTERVAL_SECONDS', '5'))          # 状态上报每 5 秒
+MIN_POLL_INTERVAL = float(os.environ.get('RASPBERRY_MIN_POLL_INTERVAL_SECONDS', '1'))      # 指令轮询 1~2 秒
+MAX_POLL_INTERVAL = float(os.environ.get('RASPBERRY_MAX_POLL_INTERVAL_SECONDS', '2'))
 MIN_DETECTION_INTERVAL = float(os.environ.get('RASPBERRY_MIN_DETECTION_INTERVAL_SECONDS', '5'))
 MAX_DETECTION_INTERVAL = float(os.environ.get('RASPBERRY_MAX_DETECTION_INTERVAL_SECONDS', '10'))
 
@@ -52,7 +55,7 @@ SAMPLES_DIR = os.path.join(os.path.dirname(__file__), '..', 'samples')
 
 # 日志队列（用于可视化显示）
 log_queue = Queue(maxsize=100)
-status_queue = Queue(maxsize=10)
+status_queue = Queue(maxsize=10)          # 队列容量 10，使用非阻塞写入避免阻塞
 detection_queue = Queue(maxsize=10)
 command_queue = Queue(maxsize=20)
 
@@ -189,7 +192,11 @@ class RaspberryPiSimulator:
                 resp = self.session.post(url, json=status, timeout=10)
                 if resp.status_code == 200:
                     self.status_count += 1
-                    status_queue.put(status)
+                    # 非阻塞写入，队列满时直接丢弃，防止阻塞上报线程
+                    try:
+                        status_queue.put_nowait(status)
+                    except:
+                        pass
                     logger.info(f"状态上报成功: 电量={status['battery']}%")
                 elif resp.status_code == 401:
                     logger.warning("Token 失效，需要重新登录")
@@ -221,6 +228,7 @@ class RaspberryPiSimulator:
             except Exception as e:
                 logger.error(f"轮询指令异常: {e}")
 
+            # 轮询间隔：1~2 秒
             interval = random.uniform(MIN_POLL_INTERVAL, MAX_POLL_INTERVAL)
             time.sleep(interval)
 
@@ -246,15 +254,13 @@ class RaspberryPiSimulator:
                 result = resp.json()
                 if result.get('code') == 200:
                     data = result.get('data', {})
-                    # 检查是否为停止状态（待机但正在中断）
                     status = data.get('status', '')
                     status_text = data.get('statusText', '')
-                    # 如果状态不是 firing（照射中），说明有停止信号
                     if status != 'firing' or '停止' in status_text or '中断' in status_text:
                         logger.info(f'检测到停止信号: status={status}, statusText={status_text}')
                         return True
         except Exception as e:
-            pass  # 静默失败，继续执行
+            pass
         return False
 
     def _execute_fire(self, cmd_id, command_id, duration_ms):
@@ -262,11 +268,8 @@ class RaspberryPiSimulator:
         self.current_firing_cmd_id = cmd_id
         self.stop_requested = False
 
-        # ========== 先随机决定成功/失败 ==========
-        # 如果一开始就失败，立即返回，不需要等照射时间
         will_succeed = random.random() < 0.9
         if not will_succeed:
-            # 模拟启动失败：只等待 200ms 就返回失败
             time.sleep(0.2)
             logger.info(f'照射启动失败，立即反馈')
             self._update_laser_status('standby', '待机')
@@ -274,29 +277,24 @@ class RaspberryPiSimulator:
             self.stop_requested = False
             return 'FAILED', f'照射启动失败，执行时间: 200ms'
 
-        # ========== 开始正常照射 ==========
         self._update_laser_status('firing', '照射中')
 
-        # 分阶段休眠，每100ms检查一次停止标志和后端停止信号
         elapsed = 0
-        interval = 0.1  # 100ms 检查一次
+        interval = 0.1
         total_time = duration_ms / 1000.0
 
         while elapsed < total_time and not self.stop_requested:
             time.sleep(interval)
             elapsed += interval
-            # 每次都检查后端的停止信号（实时中断）
             if self._check_stop_signal():
                 self.stop_requested = True
                 logger.info(f'检测到后端停止信号，立即中断照射')
                 break
 
         if self.stop_requested:
-            # 被停止了
             result = 'SUCCESS'
             message = f'激光照射中断，实际执行: {int(elapsed * 1000)}ms'
         else:
-            # 正常完成
             result = 'SUCCESS'
             message = f'照射完成，时长: {duration_ms}ms'
 
@@ -315,23 +313,16 @@ class RaspberryPiSimulator:
         logger.info(f"开始执行指令: id={cmd_id}, action={action}")
         command_queue.put(('START', cmd_id, action, ''))
 
-        # ========== 高优先级停止指令 ==========
-        # 立即中断当前照射，不需要等执行完
         if action == 'STOP':
-            # 设置停止标志，中断正在执行的照射
             if self.current_firing_cmd_id is not None:
                 self.stop_requested = True
-            # 快速响应，不需要等太久
             time.sleep(0.2)
             self._update_laser_status('standby', '照射已停止，待机中')
             result = 'SUCCESS'
             message = '停止指令执行成功'
-        # ========== FIRE 照射指令（可被中断）==========
         elif action == 'FIRE':
-            # FIRE 指令使用 duration 参数（毫秒）
             duration_ms = params.get('duration', 1000)
             result, message = self._execute_fire(cmd_id, command_id, duration_ms)
-        # ========== 其他指令 ==========
         elif action == 'AIM':
             time.sleep(0.5)
             result = 'SUCCESS' if random.random() < 0.9 else 'FAILED'
@@ -380,12 +371,11 @@ class RaspberryPiSimulator:
         except Exception as e:
             logger.error(f"指令确认异常: {e}")
 
-        # 激光反馈上报
+        # 激光反馈上报（事件驱动，执行完成时上报）
         laser_feedback_status = 'N/A'
         if action in ['ENABLE', 'DISABLE', 'FIRE', 'STOP', 'SET_POWER', 'AIM', 'SELF_TEST', 'RESET']:
             laser_feedback_status = self._report_laser_feedback(command_id, action, result, message)
 
-        # 更新指令状态（包含激光反馈结果）
         command_queue.put(('LASER', cmd_id, action, laser_feedback_status))
 
     def _report_laser_feedback(self, command_id, action, result, message):
@@ -476,7 +466,7 @@ class RaspberryPiSimulator:
             'inferenceTime': elapsed_ms,
             'image': raw_image_path.name,
             'detectedAt': self._get_current_timestamp(),
-            'detections': detections  # 添加detections字段
+            'detections': detections
         }
         self.last_detection = detection_result
         detection_queue.put(detection_result)
@@ -486,6 +476,7 @@ class RaspberryPiSimulator:
             if result_image_path is None or not result_image_path.exists():
                 result_image_path = raw_image_path
 
+            # 检测完成时通过 multipart/form-data 上报原始图与标注图
             url = f'{SERVER_BASE_URL}/api/v1/detection/report'
             files = {
                 'rawImage': (raw_image_path.name, open(raw_image_path, 'rb'), 'image/jpeg'),
@@ -552,7 +543,6 @@ def create_visual_dashboard(simulator):
 
     console = Console()
 
-    # 历史数据保存
     logs_history = []
     commands_history = []
     detections_history = []
@@ -706,7 +696,6 @@ def main():
     """主入口"""
     simulator = RaspberryPiSimulator()
 
-    # 检查 rich 库是否安装
     try:
         import rich
     except ImportError:
@@ -714,10 +703,8 @@ def main():
         import subprocess
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'rich'])
 
-    # 启动工作线程
     threads = simulator.run()
 
-    # 启动可视化界面
     try:
         create_visual_dashboard(simulator)
     except KeyboardInterrupt:
@@ -727,4 +714,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

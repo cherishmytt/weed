@@ -51,7 +51,7 @@
         <el-form-item label="类别过滤 (可选)">
           <el-input
             v-model="detectForm.classes"
-            placeholder="示例: 1 或 0,1，留空=全部"
+            placeholder="1 = 过滤作物，0 = 过滤杂草"
             style="width: 400px;"
           />
         </el-form-item>
@@ -81,6 +81,7 @@
               :src="detectResult.result.originalImageUrl"
               fit="contain"
               :preview-src-list="[detectResult.result.originalImageUrl]"
+              preview-teleported
               style="width: 100%; max-height: 400px"
             />
           </div>
@@ -95,6 +96,7 @@
               :src="detectResult.result.outputImageUrl"
               fit="contain"
               :preview-src-list="[detectResult.result.outputImageUrl]"
+              preview-teleported
               style="width: 100%; max-height: 400px"
             />
           </div>
@@ -123,8 +125,8 @@
             <div class="card-header">
               <h4 class="section-title">目标列表 (共 {{ detectResult.result.result.detections.length }} 个目标)</h4>
             </div>
-            <el-table :data="detectResult.result.result.detections" border max-height="400">
-              <el-table-column label="类别ID" width="100">
+            <el-table :data="detectResult.result.result.detections" border max-height="400" fit style="width: 100%;">
+              <el-table-column label="类别ID" width="80">
                 <template #default="{ row }">
                   <el-tag>{{ row.classId ?? 0 }}</el-tag>
                 </template>
@@ -136,12 +138,12 @@
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="confidence" label="置信度" width="100">
+              <el-table-column label="置信度">
                 <template #default="{ row }">
                   {{ ((row.confidence ?? 0) * 100).toFixed(1) }}%
                 </template>
               </el-table-column>
-              <el-table-column label="边界框 [x1, y1, x2, y2]" width="200">
+              <el-table-column label="边界框 [x1, y1, x2, y2]">
                 <template #default="{ row }">
                   <template v-if="row.bbox">
                     <template v-if="Array.isArray(row.bbox)">
@@ -190,21 +192,34 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled, Document, Delete } from '@element-plus/icons-vue'
 import { yoloPredict, saveDetectionRecord } from '@/api/detection'
+import { useDetectionStore } from '@/store/detection'
 
 const uploadRef = ref(null)
 const detectLoading = ref(false)
 const saving = ref(false)
+
+const detectionStore = useDetectionStore()
+
 const detectForm = ref({
-  file: null,
-  fileName: '',
-  conf: 0.15,
-  classes: ''
+  file: detectionStore.detectForm.file,
+  fileName: detectionStore.detectForm.fileName,
+  conf: detectionStore.detectForm.conf,
+  classes: detectionStore.detectForm.classes
 })
-const detectResult = ref(null)
+
+const detectResult = ref(detectionStore.currentResult)
+
+watch(detectForm, (newForm) => {
+  detectionStore.setDetectForm(newForm)
+}, { deep: true })
+
+watch(detectResult, (newResult) => {
+  detectionStore.setDetectionResult(newResult)
+})
 
 function handleFileChange(file, fileList) {
   if (fileList && fileList.length > 0) {
@@ -222,6 +237,7 @@ function clearFile() {
   if (uploadRef.value) {
     uploadRef.value.clearFiles()
   }
+  detectionStore.clearDetectForm()
 }
 
 async function startDetection() {
@@ -239,6 +255,7 @@ async function startDetection() {
     )
     if (res.code === 200) {
       detectResult.value = res.data
+      detectionStore.setDetectionResult(res.data)
       ElMessage.success('检测完成')
     } else {
       ElMessage.error(res.message || '检测失败')
@@ -312,7 +329,6 @@ async function saveToDetectionRecords() {
 
 <style scoped>
 .yolo-detection-page {
-  padding: 20px;
   min-height: 0;
 }
 
@@ -422,18 +438,25 @@ h4 {
 
 .clear-button {
   flex-shrink: 0;
-  color: var(--text-tertiary);
-  transition: color 0.3s ease;
-  padding: 0;
-  width: 20px;
-  height: 20px;
+  color: var(--accent-red);
+  transition: all 0.3s ease;
+  padding: 8px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(255, 93, 93, 0.1);
+  border: 1px solid rgba(255, 93, 93, 0.3);
+  border-radius: 12px;
+  font-size: 18px;
 }
 
 .clear-button:hover {
-  color: var(--accent-red);
+  background: rgba(255, 93, 93, 0.2);
+  border-color: var(--accent-red);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(255, 93, 93, 0.3);
 }
 
 .form-tip {
@@ -456,40 +479,39 @@ h4 {
 }
 
 .runtime-log {
-  background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
-  padding: 12px;
-  border-radius: 16px;
+  background: var(--bg-input);
+  padding: 16px;
   max-height: 200px;
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-all;
   margin: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  font-family: var(--font-family);
+  font-family: 'Consolas', 'Monaco', 'Microsoft YaHei', monospace;
+  font-size: 13px;
+  line-height: 1.8;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-soft);
 }
 
 /* 自定义折叠面板样式 */
 .log-card :deep(.el-collapse-item__header) {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  background: transparent;
+  border: none !important;
   color: var(--text-primary);
   font-family: var(--font-family);
   font-weight: 500;
-  padding: 12px 16px;
+  padding: 8px 0;
   margin-bottom: 8px;
-  transition: all 0.3s ease;
 }
 
 .log-card :deep(.el-collapse-item__header:hover) {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--primary-color);
+  background: transparent;
 }
 
 .log-card :deep(.el-collapse-item__content) {
   background: transparent;
-  border: none;
+  border: none !important;
   padding: 0;
 }
 
@@ -497,11 +519,31 @@ h4 {
   color: var(--text-secondary);
 }
 
+.log-card :deep(.el-collapse) {
+  border: none !important;
+  background: transparent !important;
+}
+
+.log-card :deep(.el-collapse-item) {
+  border: none !important;
+  background: transparent !important;
+}
+
+.log-card :deep(.el-collapse-item__wrap) {
+  border: none !important;
+  background: transparent !important;
+}
+
+.log-card :deep(.el-collapse-item__header) {
+  background: transparent !important;
+}
+
+.log-card :deep(.el-collapse-item__content) {
+  background: transparent !important;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .yolo-detection-page {
-    padding: 10px;
-  }
   
   .online-detect-card,
   .result-card {
@@ -514,6 +556,61 @@ h4 {
   .log-card {
     padding: 12px;
   }
+}
+
+/* 检测统计样式 */
+.stats-card :deep(.el-descriptions) {
+  background: transparent;
+}
+
+.stats-card :deep(.el-descriptions__label) {
+  color: #a0c8e8 !important;
+  font-weight: 600;
+  font-size: 14px;
+  background: transparent;
+}
+
+.stats-card :deep(.el-descriptions__content) {
+  color: #eaf5ff !important;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.stats-card :deep(.el-descriptions__border) {
+  border: none !important;
+}
+
+.stats-card :deep(.el-descriptions__cell) {
+  border: none !important;
+  padding: 8px 12px !important;
+}
+
+/* 目标列表表格样式 */
+.targets-card :deep(.el-table) {
+  background: transparent;
+}
+
+.targets-card :deep(.el-table__header) {
+  background: transparent;
+}
+
+.targets-card :deep(.el-table th) {
+  color: #a0c8e8 !important;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.targets-card :deep(.el-table td) {
+  color: #eaf5ff !important;
+  font-size: 14px;
+}
+
+.targets-card :deep(.el-table__row:hover) {
+  background: rgba(89, 214, 255, 0.1) !important;
+}
+
+.targets-card :deep(.el-table__border) {
+  border: none !important;
 }
 
 /* 自定义按钮样式 */
@@ -545,5 +642,30 @@ h4 {
   border-color: rgba(255, 255, 255, 0.1) !important;
   color: var(--text-tertiary) !important;
   cursor: not-allowed !important;
+}
+
+/* 自定义输入数字组件样式 */
+.yolo-detection-page :deep(.el-input-number) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.yolo-detection-page :deep(.el-input-number__decrease),
+.yolo-detection-page :deep(.el-input-number__increase) {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--text-secondary);
+}
+
+.yolo-detection-page :deep(.el-input-number__decrease:hover),
+.yolo-detection-page :deep(.el-input-number__increase:hover) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.yolo-detection-page :deep(.el-input-number__inner) {
+  background: transparent !important;
+  color: var(--text-primary);
 }
 </style>

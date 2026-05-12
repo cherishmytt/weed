@@ -52,3 +52,14 @@ export function getTrajectory(startTime, endTime) {
     params: { startTime, endTime }
   })
 }
+
+/**
+ * 批量删除状态记录
+ */
+export function deleteStatusBatch(ids) {
+  return request({
+    url: '/robot/status/batch',
+    method: 'delete',
+    data: ids
+  })
+}

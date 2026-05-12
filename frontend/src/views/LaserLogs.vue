@@ -3,12 +3,11 @@
   <div class="main-card glass-panel">
     <div class="card-header">
       <div class="header-title">
-        <el-icon><List /></el-icon>
         <span>激光操作日志</span>
-        <span class="log-count" v-if="total > 0">(共 {{ total }} 条记录)</span>
+        <span v-if="selectedIds.size > 0" class="selected-count">(已选择 {{ selectedIds.size }} 条)</span>
       </div>
       <div class="header-actions">
-        <el-button type="success" size="small" @click="exportSelected" :disabled="selectedIds.size === 0">
+        <el-button type="success" size="small" @click="exportSelected">
           <el-icon><Download /></el-icon>
           导出选中
         </el-button>
@@ -16,7 +15,7 @@
           <el-icon><Download /></el-icon>
           导出全部
         </el-button>
-        <el-button type="danger" size="small" @click="batchDelete" :disabled="selectedIds.size === 0">
+        <el-button type="danger" size="small" @click="batchDelete">
           <el-icon><Delete /></el-icon>
           批量删除
         </el-button>
@@ -186,16 +185,10 @@
         </el-table-column>
         <el-table-column prop="createdAt" label="执行时间" width="170" fixed="right" sortable />
       </el-table>
-
-      <!-- 空状态 -->
-      <el-empty v-if="!loadingLogs && tableData.length === 0" description="暂无符合条件的日志记录" />
     </div>
 
     <!-- 分页 -->
     <div class="pagination-wrapper">
-      <div class="pagination-info">
-        共 {{ total }} 条记录，当前第 {{ currentPage }} 页 / 共 {{ totalPages }} 页
-      </div>
       <el-pagination
         :current-page="currentPage"
         :page-size="pageSize"
@@ -204,7 +197,6 @@
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
         layout="total, sizes, prev, pager, next, jumper"
-        background
       />
     </div>
   </div>
@@ -215,6 +207,8 @@
     title="日志详情"
     width="600px"
     :close-on-click-modal="false"
+    center
+    teleport="body"
   >
     <el-descriptions :column="1" border v-if="currentLog">
       <el-descriptions-item label="ID">{{ currentLog.id }}</el-descriptions-item>
@@ -262,8 +256,8 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const dateRange = ref([])
 const quickTime = ref('')
+const isFirstLoad = ref(true)
 
-// 筛选条件
 const filters = ref({
   action: [],
   result: [],
@@ -274,15 +268,12 @@ const filters = ref({
   durationRange: []
 })
 
-// 批量选择
 const selectedIds = ref(new Set())
 const selectedRows = ref([])
 
-// 排序参数
 const sortProp = ref('createdAt')
 const sortOrder = ref('descending')
 
-// 详情弹窗
 const detailDialogVisible = ref(false)
 const currentLog = ref(null)
 
@@ -293,7 +284,6 @@ function goBack() {
   router.push('/laser')
 }
 
-// 设置快捷时间
 function setQuickTime(type) {
   const now = new Date()
   let start, end
@@ -366,6 +356,17 @@ async function loadLogs() {
     if (res.code === 200) {
       tableData.value = res.data.list
       total.value = res.data.total
+      if (!isFirstLoad.value) {
+        ElMessage.success(`查询完成，共找到 ${res.data.total} 条日志`)
+      } else {
+        isFirstLoad.value = false
+      }
+    }
+  } catch (error) {
+    if (!isFirstLoad.value) {
+      ElMessage.error('查询失败，请稍后重试')
+    } else {
+      isFirstLoad.value = false
     }
   } finally {
     loadingLogs.value = false
@@ -410,21 +411,18 @@ function handleRowClick(row) {
   detailDialogVisible.value = true
 }
 
-// 排序变化 - 后端排序，对所有数据排序
 function handleSortChange({ column, prop, order }) {
   sortProp.value = prop
-  sortOrder.value = order || 'descending' // null 表示取消排序，默认降序
-  currentPage.value = 1 // 排序变化后回到第一页
+  sortOrder.value = order || 'descending'
+  currentPage.value = 1
   loadLogs()
 }
 
-// 格式化数字，保留两位小数
 function formatNumber(num) {
   if (num === null || num === undefined) return '--'
   return Number(num).toFixed(2)
 }
 
-// 根据指令类型获取标签颜色
 function getActionTagType(action) {
   const colorMap = {
     'ENABLE': 'success',
@@ -439,7 +437,6 @@ function getActionTagType(action) {
   return colorMap[action] || 'info'
 }
 
-// 根据结果获取标签颜色
 function getResultTagType(result) {
   const typeMap = {
     'SUCCESS': 'success',
@@ -460,7 +457,6 @@ function getResultLabel(result) {
   return labelMap[result] || result
 }
 
-// 导出选中
 async function exportSelected() {
   if (selectedIds.value.size === 0) {
     ElMessage.warning('请先选择要导出的日志')
@@ -469,15 +465,13 @@ async function exportSelected() {
   await exportCsv(Array.from(selectedIds.value))
 }
 
-// 导出全部
 async function exportAll() {
   try {
-    // 获取当前筛选条件下的所有ID进行导出
     loadingLogs.value = true
     const res = await getLaserLogs({
       ...getCurrentParams(),
       page: 1,
-      size: 10000 // 导出最多一万条
+      size: 10000
     })
     if (res.code === 200) {
       const ids = res.data.list.map(item => item.id)
@@ -492,7 +486,6 @@ async function exportCsv(ids) {
   try {
     const res = await exportLaserLogs(ids)
     if (res.code === 200) {
-      // 生成CSV并下载
       const csvContent = generateCsv(res.data)
       downloadCsv(csvContent)
       ElMessage.success(`成功导出 ${ids.length} 条记录`)
@@ -557,7 +550,6 @@ function getCurrentParams() {
   return params
 }
 
-// 批量删除
 async function batchDelete() {
   if (selectedIds.value.size === 0) {
     ElMessage.warning('请先选择要删除的日志')
@@ -581,7 +573,6 @@ async function batchDelete() {
       loadLogs()
     }
   } catch {
-    // 用户取消
   }
 }
 
@@ -592,20 +583,12 @@ onMounted(() => {
 
 <style scoped>
 .laser-logs-container {
-  padding: 20px;
-  min-height: 100vh;
-  background: var(--app-background);
 }
 
 .main-card {
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   padding: 24px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.05);
 }
 
 .card-header {
@@ -626,6 +609,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.selected-count {
+  font-weight: normal;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 .header-actions {
@@ -660,6 +649,31 @@ onMounted(() => {
   font-weight: 500;
 }
 
+.quick-time :deep(.el-button) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--text-primary) !important;
+}
+
+.quick-time :deep(.el-button:hover) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: var(--primary-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.quick-time :deep(.el-button--primary) {
+  background: rgba(64, 158, 255, 0.3) !important;
+  border-color: rgba(64, 158, 255, 0.5) !important;
+  color: white !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+.quick-time :deep(.el-button--primary:hover) {
+  background: rgba(64, 158, 255, 0.4) !important;
+  border-color: rgba(64, 158, 255, 0.6) !important;
+  color: white !important;
+}
+
 .filter-row {
   margin-bottom: 16px;
 }
@@ -679,102 +693,13 @@ onMounted(() => {
   align-items: flex-end;
 }
 
-.filter-buttons .el-button,
-.header-actions .el-button,
-.quick-time .el-button-group .el-button {
-  border-radius: 8px !important;
-  font-size: 12px !important;
-  padding: 6px 12px !important;
-  height: 32px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: var(--text-primary) !important;
-  font-family: var(--font-family) !important;
-  font-weight: 500 !important;
-  transition: all 0.3s ease !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
-}
-
-.filter-buttons .el-button:hover,
-.header-actions .el-button:hover,
-.quick-time .el-button-group .el-button:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: var(--primary-color) !important;
-}
-
-.filter-buttons .el-button--primary,
-.filter-buttons .el-button--success,
-.filter-buttons .el-button--warning,
-.filter-buttons .el-button--danger,
-.header-actions .el-button--primary,
-.header-actions .el-button--success,
-.header-actions .el-button--warning,
-.header-actions .el-button--danger,
-.quick-time .el-button-group .el-button--primary,
-.quick-time .el-button-group .el-button--success,
-.quick-time .el-button-group .el-button--warning,
-.quick-time .el-button-group .el-button--danger {
-  background: var(--primary-color) !important;
-  border-color: var(--primary-color) !important;
-  color: white !important;
-}
-
-.filter-buttons .el-button.is-disabled,
-.header-actions .el-button.is-disabled,
-.quick-time .el-button-group .el-button.is-disabled {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  color: var(--text-tertiary) !important;
-  cursor: not-allowed !important;
-}
-
 .log-table-container {
-  height: calc(100vh - 400px);
-  min-height: 400px;
-  margin-bottom: 20px;
-  position: relative;
   width: 100%;
   overflow-x: auto;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .log-table-container :deep(.el-table) {
   width: 100% !important;
-  background: transparent;
-}
-
-.log-table-container :deep(.el-table__header th) {
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: var(--text-primary) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-.log-table-container :deep(.el-table__body td) {
-  background: rgba(255, 255, 255, 0.05) !important;
-  color: var(--text-primary) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-.log-table-container :deep(.el-tag--success) {
-  background: rgba(64, 158, 255, 0.1) !important;
-  border-color: rgba(64, 158, 255, 0.2) !important;
-  color: var(--primary-color) !important;
-}
-
-.log-table-container :deep(.el-tag--danger) {
-  background: rgba(64, 158, 255, 0.1) !important;
-  border-color: rgba(64, 158, 255, 0.2) !important;
-  color: var(--primary-color) !important;
-}
-
-.log-table-container :deep(.el-table__body tr:hover td) {
-  background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .ellipsis {
@@ -786,16 +711,11 @@ onMounted(() => {
 }
 
 .pagination-wrapper {
+  margin-top: 24px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.pagination-info {
-  color: var(--text-secondary);
-  font-size: 14px;
+  justify-content: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
 }
 
 .message-pre {
@@ -811,30 +731,4 @@ onMounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* 分页组件样式 */
-.pagination-wrapper :deep(.el-pagination) {
-  .el-pagination__prev, .el-pagination__next, .el-pagination__sizes, .el-pagination__jump {
-    .el-button {
-      background: white !important;
-      border-color: #dcdfe6 !important;
-      color: #606266 !important;
-    }
-  }
-  .el-pagination__sizes {
-    .el-select .el-input {
-      .el-input__inner {
-        background: white !important;
-        border-color: #dcdfe6 !important;
-        color: #606266 !important;
-      }
-    }
-  }
-  .el-pagination__jump {
-    input {
-      background: white !important;
-      border-color: #dcdfe6 !important;
-      color: #606266 !important;
-    }
-  }
-}
 </style>

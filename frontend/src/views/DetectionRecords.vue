@@ -17,28 +17,29 @@
           />
         </div>
         <div class="filter-buttons">
-          <el-button type="primary" @click="handleQuery">查询</el-button>
+          <el-button type="primary" @click="handleQuery" :loading="loading">查询</el-button>
           <el-button @click="resetFilters">重置</el-button>
         </div>
       </div>
 
       <div class="table-container">
-        <el-table :data="tableData" border v-loading="loading" style="width: 100%;">
+        <el-table :data="tableData" border v-loading="loading" fit style="width: 100%;">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column label="图片预览" width="200">
+        <el-table-column label="图片预览" width="220">
           <template #default="{ row }">
             <el-image
               :src="row.imageUrl"
               fit="cover"
               :preview-src-list="[row.imageUrl]"
+              preview-teleported
               style="width: 180px; height: 120px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); background: var(--bg-input);"
             />
           </template>
         </el-table-column>
-        <el-table-column prop="weedCount" label="杂草数量" width="100" />
-        <el-table-column prop="cropCount" label="作物数量" width="100" />
-        <el-table-column prop="inferenceTime" label="推理耗时 ms" width="120" />
-        <el-table-column prop="detectedAt" label="检测时间" width="180" />
+        <el-table-column prop="weedCount" label="杂草数量" />
+        <el-table-column prop="cropCount" label="作物数量" />
+        <el-table-column prop="inferenceTime" label="推理耗时 ms" />
+        <el-table-column prop="detectedAt" label="检测时间" />
         <el-table-column label="操作" width="120">
           <template #default="{ row }">
             <el-button type="primary" link @click="openDetail(row.id)">
@@ -76,6 +77,7 @@
                   :src="currentDetail.imageUrl"
                   fit="contain"
                   :preview-src-list="[currentDetail.imageUrl]"
+                  preview-teleported
                   style="width: 100%; max-height: 300px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); background: var(--bg-input);"
                 />
               </div>
@@ -87,6 +89,7 @@
                   :src="currentDetail.resultUrl"
                   fit="contain"
                   :preview-src-list="[currentDetail.resultUrl]"
+                  preview-teleported
                   style="width: 100%; max-height: 300px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); background: var(--bg-input);"
                 />
               </div>
@@ -153,6 +156,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getDetectionRecords, getDetectionDetail } from '@/api/detection'
+import { ElMessage } from 'element-plus'
 
 const dateRange = ref([])
 const currentPage = ref(1)
@@ -160,6 +164,7 @@ const pageSize = ref(10)
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
+const isFirstLoad = ref(true)
 
 // 详情抽屉
 const detailDrawerVisible = ref(false)
@@ -179,6 +184,17 @@ async function handleQuery() {
     if (res.code === 200) {
       tableData.value = res.data.list
       total.value = res.data.total
+      if (!isFirstLoad.value) {
+        ElMessage.success(`查询完成，共找到 ${res.data.total} 条记录`)
+      } else {
+        isFirstLoad.value = false
+      }
+    }
+  } catch (error) {
+    if (!isFirstLoad.value) {
+      ElMessage.error('查询失败，请稍后重试')
+    } else {
+      isFirstLoad.value = false
     }
   } finally {
     loading.value = false
@@ -225,14 +241,13 @@ onMounted(() => {
 
 <style scoped>
 .detection-records-page {
-  padding: 20px;
-  min-height: 100vh;
-  background: var(--app-background);
 }
 
 .records-card {
   padding: 24px;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+  z-index: 1;
 }
 
 .card-header {
@@ -269,8 +284,10 @@ h2 {
 
 .table-container {
   width: 100%;
-  overflow-x: auto;
+  overflow-x: visible;
   margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
 }
 
 .table-container :deep(.el-table) {
@@ -312,30 +329,7 @@ h2 {
   margin-bottom: 15px;
 }
 
-/* 检测统计样式 */
-.detail-card :deep(.el-descriptions) {
-  background: transparent;
-}
 
-.detail-card :deep(.el-descriptions__label) {
-  color: var(--text-secondary) !important;
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.detail-card :deep(.el-descriptions__content) {
-  color: var(--text-primary) !important;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.detail-card :deep(.el-descriptions__border) {
-  border-color: var(--line-soft) !important;
-}
-
-.detail-card :deep(.el-descriptions__cell) {
-  border-color: var(--line-soft) !important;
-}
 
 /* 重置按钮样式 */
 .filter-buttons :deep(.el-button:not(.el-button--primary)) {
@@ -352,9 +346,6 @@ h2 {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .detection-records-page {
-    padding: 10px;
-  }
 
   .filter-bar {
     flex-direction: column;

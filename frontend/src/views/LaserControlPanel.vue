@@ -5,12 +5,7 @@
         <!-- 激光设备状态卡片 -->
         <div class="status-card glass-panel">
           <div class="card-header">
-            <el-icon><Connection /></el-icon>
             <span>激光设备状态</span>
-            <el-button type="primary" @click="refreshStatus" :loading="loadingStatus" style="margin-left: auto;">
-              <el-icon><Refresh /></el-icon>
-              刷新状态
-            </el-button>
           </div>
           <el-descriptions :column="3" border v-loading="loadingStatus" class="fixed-width-descriptions">
             <el-descriptions-item label="连接状态" :width="180">
@@ -41,8 +36,7 @@
 
         <!-- 发送控制指令卡片 -->
         <div class="command-card glass-panel" style="margin-top: 24px;">
-          <div class="card-header">
-            <el-icon><Operation /></el-icon>
+          <div class="card-header-left">
             <span>发送控制指令</span>
           </div>
 
@@ -58,73 +52,81 @@
             </div>
           </div>
 
-          <el-form :model="commandForm" label-width="140px" size="default" style="max-width: 800px; margin-top: 16px;">
+          <el-form :model="commandForm" label-width="auto" size="default" style="max-width: 100%; margin-top: 16px;">
             <!-- 指令类型选择 - 按钮组 -->
             <el-form-item label="指令类型">
-              <el-button-group>
-                <el-button
-                  :type="commandForm.action === 'ENABLE' ? 'primary' : 'default'"
-                  :disabled="status?.connected"
-                  @click="selectAction('ENABLE')"
-                >
-                  ▶ 上电使能
-                </el-button>
-                <el-button
-                  :type="commandForm.action === 'DISABLE' ? 'primary' : 'default'"
-                  :disabled="!status?.connected"
-                  @click="selectAction('DISABLE')"
-                >
-                  ■ 断电关闭
-                </el-button>
-              </el-button-group>
-              <br/>
-              <el-button-group style="margin-top: 8px;">
-                <el-button
-                  :type="commandForm.action === 'AIM' ? 'success' : 'default'"
-                  :disabled="!status?.connected"
-                  @click="selectAction('AIM')"
-                >
-                  🎯 瞄准
-                </el-button>
-                <el-button
-                  :type="commandForm.action === 'FIRE' ? 'primary' : 'default'"
-                  :disabled="!status?.connected"
-                  @click="selectAction('FIRE')"
-                >
-                  🔥 照射
-                </el-button>
-                <el-button
-                  type="danger"
-                  :disabled="!status?.connected"
-                  @click="sendStopCommand"
-                  :loading="stopSending"
-                >
-                  ⏸ 停止
-                </el-button>
-              </el-button-group>
-              <br/>
-              <el-button-group style="margin-top: 8px;">
-                <el-button
-                  :type="commandForm.action === 'SET_POWER' ? 'primary' : 'default'"
-                  :disabled="!status?.connected"
-                  @click="selectAction('SET_POWER')"
-                >
-                  ⚙ 设置功率
-                </el-button>
-                <el-button
-                  :type="commandForm.action === 'SELF_TEST' ? 'primary' : 'default'"
-                  :disabled="!status?.connected"
-                  @click="selectAction('SELF_TEST')"
-                >
-                  🔧 自检
-                </el-button>
-                <el-button
-                  :type="commandForm.action === 'RESET' ? 'primary' : 'default'"
-                  @click="selectAction('RESET')"
-                >
-                  🔄 复位
-                </el-button>
-              </el-button-group>
+              <div class="btn-group-container">
+                <!-- 第一行：上电 / 断电 / 自检 / 复位 -->
+                <div class="action-btn-row">
+                  <button
+                    class="action-btn"
+                    :class="{ 'active': commandForm.action === 'ENABLE', 'disabled': status?.connected }"
+                    :disabled="status?.connected"
+                    @click.prevent="selectAction('ENABLE')"
+                  >
+                    <span class="btn-label">上电使能</span>
+                  </button>
+                  <button
+                    class="action-btn"
+                    :class="{ 'active': commandForm.action === 'DISABLE', 'disabled': !status?.connected }"
+                    :disabled="!status?.connected"
+                    @click.prevent="selectAction('DISABLE')"
+                  >
+                    <span class="btn-label">断电关闭</span>
+                  </button>
+                  <button
+                    class="action-btn"
+                    :class="{ 'active': commandForm.action === 'SELF_TEST', 'disabled': !status?.connected }"
+                    :disabled="!status?.connected"
+                    @click.prevent="selectAction('SELF_TEST')"
+                  >
+                    <span class="btn-label">自检</span>
+                  </button>
+                  <button
+                    class="action-btn"
+                    :class="{ 'active': commandForm.action === 'RESET' }"
+                    @click.prevent="selectAction('RESET')"
+                  >
+                    <span class="btn-label">复位</span>
+                  </button>
+                </div>
+
+                <!-- 第二行：瞄准 / 照射 / 停止 / 设置功率 -->
+                <div class="action-btn-row">
+                  <button
+                    class="action-btn"
+                    :class="{ 'active': commandForm.action === 'AIM', 'disabled': !status?.connected }"
+                    :disabled="!status?.connected"
+                    @click.prevent="selectAction('AIM')"
+                  >
+                    <span class="btn-label">瞄准</span>
+                  </button>
+                  <button
+                    class="action-btn"
+                    :class="{ 'active': commandForm.action === 'FIRE', 'disabled': !status?.connected }"
+                    :disabled="!status?.connected"
+                    @click.prevent="selectAction('FIRE')"
+                  >
+                    <span class="btn-label">照射</span>
+                  </button>
+                  <button
+                    class="action-btn action-btn--danger"
+                    :class="{ 'disabled': !status?.connected, 'loading': stopSending }"
+                    :disabled="!status?.connected"
+                    @click.prevent="sendStopCommand"
+                  >
+                    <span class="btn-label">{{ stopSending ? '执行中…' : '停止' }}</span>
+                  </button>
+                  <button
+                    class="action-btn"
+                    :class="{ 'active': commandForm.action === 'SET_POWER', 'disabled': !status?.connected }"
+                    :disabled="!status?.connected"
+                    @click.prevent="selectAction('SET_POWER')"
+                  >
+                    <span class="btn-label">设置功率</span>
+                  </button>
+                </div>
+              </div>
             </el-form-item>
 
             <!-- 指令说明 -->
@@ -139,10 +141,11 @@
 
             <!-- 当前瞄准位置显示 -->
             <el-alert
-              v-if="currentAimPosition"
+              v-if="showAimPosition && currentAimPosition"
               :title="`✓ 已瞄准位置: X=${currentAimPosition.targetX}, Y=${currentAimPosition.targetY}`"
               type="success"
-              :closable="false"
+              :closable="true"
+              @close="showAimPosition = false"
               show-icon
               style="margin-bottom: 16px;"
             />
@@ -155,101 +158,102 @@
               style="margin-bottom: 16px;"
             />
 
-            <!-- 参数区域 - 根据选中的指令显示对应参数 -->
+            <!-- 参数区域 -->
             <template v-if="needParams">
               <el-divider content-position="left">指令参数</el-divider>
               <div class="params-group">
+
                 <!-- AIM 瞄准参数 -->
                 <template v-if="commandForm.action === 'AIM'">
-                  <el-row :gutter="24">
+                  <el-row :gutter="16">
                     <el-col :span="12">
-                      <el-form-item label="X (像素坐标)">
+                      <el-form-item label="X 坐标 (px)">
                         <el-input-number
                           v-model="commandForm.params.targetX"
                           :precision="2"
                           :min="-500"
                           :max="5000"
-                          style="width: 100%;"
+                          class="param-input"
                         />
                       </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                      <el-form-item label="Y (像素坐标)">
+                      <el-form-item label="Y 坐标 (px)">
                         <el-input-number
                           v-model="commandForm.params.targetY"
                           :precision="2"
                           :min="-500"
                           :max="5000"
-                          style="width: 100%;"
+                          class="param-input"
                         />
                       </el-form-item>
                     </el-col>
                   </el-row>
                 </template>
 
-                <!-- FIRE 照射：深度、3D坐标、时长 -->
+                <!-- FIRE 照射参数 -->
                 <template v-if="commandForm.action === 'FIRE'">
-                  <el-row :gutter="24">
-                    <el-col :span="8">
-                      <el-form-item label="深度 (像素图像)">
+                  <el-row :gutter="16">
+                    <el-col :span="12">
+                      <el-form-item label="深度">
                         <el-input-number
                           v-model="commandForm.params.depth"
                           :precision="3"
                           :step="0.1"
                           :min="0"
                           :max="5"
-                          style="width: 100%;"
+                          class="param-input"
                         />
                       </el-form-item>
                     </el-col>
-                    <el-col :span="16">
-                      <el-form-item label="照射时长 (毫秒)">
+                    <el-col :span="12">
+                      <el-form-item label="时长 (ms)">
                         <el-input-number
                           v-model="commandForm.params.duration"
                           :min="100"
                           :max="10000"
                           :step="100"
-                          style="width: 100%;"
+                          class="param-input"
                         />
                       </el-form-item>
                     </el-col>
                   </el-row>
 
                   <el-divider content-position="left">三维坐标 (相机坐标系，单位米)</el-divider>
-                  <el-row :gutter="24">
+                  <el-row :gutter="16">
                     <el-col :span="8">
-                      <el-form-item label="position3d.X">
+                      <el-form-item label="X">
                         <el-input-number
                           v-model="commandForm.params.position3d.x"
                           :precision="3"
                           :step="0.05"
                           :min="-5"
                           :max="5"
-                          style="width: 100%;"
+                          class="param-input"
                         />
                       </el-form-item>
                     </el-col>
                     <el-col :span="8">
-                      <el-form-item label="position3d.Y">
+                      <el-form-item label="Y">
                         <el-input-number
                           v-model="commandForm.params.position3d.y"
                           :precision="3"
                           :step="0.05"
                           :min="-5"
                           :max="5"
-                          style="width: 100%;"
+                          class="param-input"
                         />
                       </el-form-item>
                     </el-col>
                     <el-col :span="8">
-                      <el-form-item label="position3d.Z (深度)">
+                      <el-form-item label="Z ">
                         <el-input-number
                           v-model="commandForm.params.position3d.z"
                           :precision="3"
                           :step="0.05"
                           :min="0"
                           :max="5"
-                          style="width: 100%;"
+                          class="param-input"
                         />
                       </el-form-item>
                     </el-col>
@@ -258,27 +262,27 @@
 
                 <!-- SET_POWER 设置功率 -->
                 <template v-if="commandForm.action === 'SET_POWER'">
-                  <el-row :gutter="24">
+                  <el-row :gutter="16">
                     <el-col :span="12">
-                      <el-form-item label="输出功率 (瓦)">
+                      <el-form-item label="功率 (W)">
                         <el-input-number
                           v-model="commandForm.params.power"
                           :min="1"
                           :max="100"
                           :step="5"
-                          style="width: 100%;"
+                          class="param-input"
                         />
                       </el-form-item>
                     </el-col>
                   </el-row>
                 </template>
+
               </div>
             </template>
 
             <!-- 发送指令按钮 -->
             <div class="submit-area">
               <el-button type="primary" size="large" @click="sendCommand" :loading="sending" style="min-width: 200px;">
-                <el-icon><VideoPlay /></el-icon>
                 发送指令
               </el-button>
             </div>
@@ -286,8 +290,9 @@
         </div>
 
       </el-col>
+
+      <!-- 右侧：模拟树莓派端面板 -->
       <el-col :span="8">
-        <!-- 树莓派端面板 -->
         <RobotMonitorPanel />
       </el-col>
     </el-row>
@@ -303,7 +308,6 @@ import {
   Refresh,
   Operation,
   VideoPlay,
-  VideoPause,
   Loading,
   CircleCheck,
   CircleClose
@@ -315,14 +319,11 @@ import RobotMonitorPanel from '@/components/RobotMonitorPanel.vue'
 const router = useRouter()
 const loadingStatus = ref(false)
 const sending = ref(false)
-const aimSending = ref(false)
-const fireSending = ref(false)
 const stopSending = ref(false)
 const status = ref(null)
-// 最新指令执行状态
 const lastCommandStatus = ref(null)
-// 当前瞄准位置
 const currentAimPosition = ref(null)
+const showAimPosition = ref(false)
 
 const commandForm = ref({
   action: 'FIRE',
@@ -330,17 +331,12 @@ const commandForm = ref({
     targetX: 150,
     targetY: 100,
     depth: 0.45,
-    position3d: {
-      x: 0.10,
-      y: 0.40,
-      z: 0.85
-    },
+    position3d: { x: 0.10, y: 0.40, z: 0.85 },
     duration: 500,
     power: 10
   }
 })
 
-// 指令说明描述
 const instructionDescriptions = {
   'ENABLE': '使激光设备上电，进入待机状态',
   'DISABLE': '关闭激光设备电源，断开连接',
@@ -352,30 +348,18 @@ const instructionDescriptions = {
   'RESET': '复位激光设备控制器，清除错误状态'
 }
 
-const currentInstructionDesc = computed(() => {
-  return instructionDescriptions[commandForm.value.action] || ''
-})
+const currentInstructionDesc = computed(() => instructionDescriptions[commandForm.value.action] || '')
+const needParams = computed(() => ['AIM', 'FIRE', 'SET_POWER'].includes(commandForm.value.action))
 
-const needParams = computed(() => {
-  return ['AIM', 'FIRE', 'SET_POWER'].includes(commandForm.value.action)
-})
-
-// 格式化时间显示 - 后端返回的 yyyy-MM-dd HH:mm:ss 格式已是本地时间，直接显示
 function formatTime(timeStr) {
   if (!timeStr) return '-'
-  // 已是标准格式，直接返回
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(timeStr)) {
-    return timeStr
-  }
-  // 其他格式尝试解析后格式化
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(timeStr)) return timeStr
   try {
     const date = new Date(timeStr)
     if (isNaN(date.getTime())) return timeStr
     const pad = n => n.toString().padStart(2, '0')
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
-  } catch (e) {
-    return timeStr
-  }
+  } catch (e) { return timeStr }
 }
 
 function selectAction(action) {
@@ -384,20 +368,12 @@ function selectAction(action) {
 }
 
 function handleActionChange() {
-  // 根据指令类型设置合理默认参数
   switch (commandForm.value.action) {
     case 'FIRE':
-      if (!commandForm.value.params.duration) {
-        commandForm.value.params.duration = 500
-      }
-      break
-    case 'AIM':
-      // AIM 不需要 duration 参数，保持默认即可
+      if (!commandForm.value.params.duration) commandForm.value.params.duration = 500
       break
     case 'SET_POWER':
-      if (!commandForm.value.params.power) {
-        commandForm.value.params.power = 10
-      }
+      if (!commandForm.value.params.power) commandForm.value.params.power = 10
       break
   }
 }
@@ -408,12 +384,8 @@ async function refreshStatus() {
     const res = await getLaserStatus()
     if (res.code === 200) {
       status.value = res.data
-      // 同时更新瞄准位置
       if (res.data.aimTargetX !== undefined && res.data.aimTargetY !== undefined) {
-        currentAimPosition.value = {
-          targetX: res.data.aimTargetX,
-          targetY: res.data.aimTargetY
-        }
+        currentAimPosition.value = { targetX: res.data.aimTargetX, targetY: res.data.aimTargetY }
       }
     }
   } finally {
@@ -421,68 +393,12 @@ async function refreshStatus() {
   }
 }
 
-// ==================== 新的指令发送方法 ====================
-async function sendAimCommand() {
-  aimSending.value = true
-  try {
-    const params = {
-      targetX: commandForm.value.params.targetX,
-      targetY: commandForm.value.params.targetY
-    }
-    const res = await sendLaserCommand('AIM', params)
-    if (res.code === 200) {
-      // 瞄准成功，更新当前瞄准位置
-      currentAimPosition.value = {
-        targetX: commandForm.value.params.targetX,
-        targetY: commandForm.value.params.targetY
-      }
-      ElMessage.success('瞄准指令已下发')
-    } else {
-      ElMessage.error(res.message || '瞄准失败')
-    }
-  } catch (e) {
-    ElMessage.error('瞄准指令发送失败')
-  } finally {
-    aimSending.value = false
-  }
-}
-
-async function sendFireCommand() {
-  if (!currentAimPosition.value) {
-    ElMessage.warning('请先执行瞄准指令设置目标位置')
-    return
-  }
-  fireSending.value = true
-  try {
-    const params = {
-      targetX: currentAimPosition.value.targetX,
-      targetY: currentAimPosition.value.targetY,
-      depth: commandForm.value.params.depth,
-      position3d: commandForm.value.params.position3d,
-      duration: commandForm.value.params.duration
-    }
-    const res = await sendLaserCommand('FIRE', params)
-    if (res.code === 200) {
-      ElMessage.success('照射指令已下发，执行中...')
-    } else {
-      ElMessage.error(res.message || '照射指令发送失败')
-    }
-  } catch (e) {
-    ElMessage.error('照射指令发送失败')
-  } finally {
-    fireSending.value = false
-  }
-}
-
 async function sendStopCommand() {
   stopSending.value = true
   try {
     const res = await sendLaserCommand('STOP', null)
-    if (res.code === 200) {
-      ElMessage.success('停止指令已下发')
-    } else {
-      ElMessage.error(res.message || '停止指令发送失败')
-    }
+    if (res.code === 200) ElMessage.success('停止指令已下发')
+    else ElMessage.error(res.message || '停止指令发送失败')
   } catch (e) {
     ElMessage.error('停止指令发送失败')
   } finally {
@@ -490,45 +406,29 @@ async function sendStopCommand() {
   }
 }
 
-// 指令中文名称映射
 const commandNames = {
-  ENABLE: '上电使能',
-  DISABLE: '断电关闭',
-  FIRE: '激光照射',
-  STOP: '停止照射',
-  AIM: '瞄准定位',
-  SET_POWER: '设置功率',
-  SELF_TEST: '设备自检',
-  RESET: '复位设备'
+  ENABLE: '上电使能', DISABLE: '断电关闭', FIRE: '激光照射',
+  STOP: '停止照射', AIM: '瞄准定位', SET_POWER: '设置功率',
+  SELF_TEST: '设备自检', RESET: '复位设备'
 }
 
 async function sendCommand() {
   const actionName = commandNames[commandForm.value.action] || commandForm.value.action
-
-  // 显示待执行状态
   lastCommandStatus.value = {
     status: 'pending',
     title: `${actionName}指令已下发`,
     message: '正在执行中，请稍候...',
     time: new Date().toLocaleTimeString()
   }
-
   sending.value = true
   try {
     let params = null
-    // 根据指令类型发送必要的参数
     switch (commandForm.value.action) {
-      case 'RESET':
-        params = null
-        break
+      case 'RESET': params = null; break
       case 'AIM':
-        params = {
-          targetX: commandForm.value.params.targetX,
-          targetY: commandForm.value.params.targetY
-        }
+        params = { targetX: commandForm.value.params.targetX, targetY: commandForm.value.params.targetY }
         break
       case 'FIRE':
-        // FIRE 检查是否已瞄准，然后发送完整参数（坐标使用已瞄准位置）
         if (!currentAimPosition.value) {
           ElMessage.warning('请先执行瞄准指令设置目标位置')
           sending.value = false
@@ -543,22 +443,14 @@ async function sendCommand() {
         }
         break
       case 'SET_POWER':
-        params = {
-          power: commandForm.value.params.power
-        }
+        params = { power: commandForm.value.params.power }
         break
-      default:
-        params = null
-        break
+      default: params = null
     }
     const res = await sendLaserCommand(commandForm.value.action, params)
     if (res.code === 200) {
-      // 标记待执行的指令ID，等待后端反馈结果
       pendingCommand = actionName
       pendingCommandId = res.data.commandId
-      console.log('📤 指令已下发，等待反馈commandId:', pendingCommandId)
-      // 显示"已下发"状态
-      // FIRE 指令特殊显示：显示"照射中"
       if (commandForm.value.action === 'FIRE') {
         lastCommandStatus.value = {
           status: 'pending',
@@ -574,7 +466,6 @@ async function sendCommand() {
           time: new Date().toLocaleTimeString()
         }
       }
-      // 设置超时：30秒后如果还没收到反馈就自动标记为超时
       setTimeout(() => {
         if (pendingCommandId === res.data.commandId) {
           lastCommandStatus.value = {
@@ -614,84 +505,40 @@ async function sendCommand() {
 
 let statusWs = null
 let isUnmounted = false
-// 等待执行结果的指令信息
 let pendingCommand = null
 let pendingCommandId = null
 
-// 指令执行结果完全通过 COMMAND_FEEDBACK WebSocket事件上报
-// 不再通过 STATUS_UPDATE 推断执行结果，避免误判
-
 function connectWebSocket() {
-  // 使用 WebSocket 单例接收实时状态更新
   statusWs = getRobotStatusWs()
-
-  // 监听激光状态更新
   statusWs._laserStatusCallback = (data) => {
     if (isUnmounted || !data) return
-    // 区分数据类型：激光状态有 connected 字段，机器人状态没有
     if (data.connected !== undefined) {
-      const oldStatus = { ...status.value }
-      // 更新状态
       status.value = { ...status.value, ...data }
-
-      // 更新当前瞄准位置
       if (data.aimTargetX !== undefined && data.aimTargetY !== undefined) {
-        currentAimPosition.value = {
-          targetX: data.aimTargetX,
-          targetY: data.aimTargetY
-        }
+        currentAimPosition.value = { targetX: data.aimTargetX, targetY: data.aimTargetY }
       }
-
-      // 重要：只通过 COMMAND_FEEDBACK 事件更新指令执行状态
-      // 不再通过 STATUS_UPDATE 推断执行结果，避免误判
     }
-    // 忽略机器人状态推送，避免字段冲突
   }
   statusWs.on('STATUS_UPDATE', statusWs._laserStatusCallback)
 
-  // 监听指令执行结果反馈（树莓派上报）
   statusWs._commandFeedbackCallback = (data) => {
     if (isUnmounted || !data) return
-    console.log('📩 前端收到指令反馈:', data, '等待的commandId:', pendingCommandId)
-
-    // 只有匹配当前等待的 commandId 才更新状态
     if (pendingCommandId && data.commandId === pendingCommandId) {
-      console.log('✅ commandId匹配，更新状态显示')
       const actionName = commandNames[data.action] || data.action
       const resultUpper = (data.result || '').toUpperCase()
-
       if (resultUpper === 'SUCCESS') {
-        // 检测是否是照射被中断的情况（FIRE 指令被中断 或 STOP 指令执行）
-        const isInterrupted = (data.action === 'FIRE' && data.message && data.message.includes('中断')) ||
-                             data.action === 'STOP'
-
-        if (isInterrupted) {
-          // 照射被停止：显示特殊标题
-          lastCommandStatus.value = {
-            status: 'success',
-            title: '激光照射停止',
-            message: data.message || '已成功停止激光照射',
-            time: new Date().toLocaleTimeString()
-          }
-        } else {
-          // 正常执行成功
-          lastCommandStatus.value = {
-            status: 'success',
-            title: `${actionName}执行成功`,
-            message: data.message || '指令已执行完成',
-            time: new Date().toLocaleTimeString()
-          }
+        const isInterrupted = (data.action === 'FIRE' && data.message?.includes('中断')) || data.action === 'STOP'
+        lastCommandStatus.value = {
+          status: 'success',
+          title: isInterrupted ? '激光照射停止' : `${actionName}执行成功`,
+          message: data.message || (isInterrupted ? '已成功停止激光照射' : '指令已执行完成'),
+          time: new Date().toLocaleTimeString()
         }
-
-        // AIM 成功后，更新瞄准位置显示
         if (data.action === 'AIM' && commandForm.value.params.targetX && commandForm.value.params.targetY) {
-          currentAimPosition.value = {
-            targetX: commandForm.value.params.targetX,
-            targetY: commandForm.value.params.targetY
-          }
+          currentAimPosition.value = { targetX: commandForm.value.params.targetX, targetY: commandForm.value.params.targetY }
+          showAimPosition.value = true
         }
       } else {
-        // 执行失败
         lastCommandStatus.value = {
           status: 'error',
           title: `${actionName}执行失败`,
@@ -699,8 +546,6 @@ function connectWebSocket() {
           time: new Date().toLocaleTimeString()
         }
       }
-
-      // 清除等待状态
       pendingCommand = null
       pendingCommandId = null
     }
@@ -708,24 +553,14 @@ function connectWebSocket() {
   statusWs.on('COMMAND_FEEDBACK', statusWs._commandFeedbackCallback)
 }
 
-onMounted(() => {
-  refreshStatus()
-  connectWebSocket()
-})
-
+onMounted(() => { refreshStatus(); connectWebSocket() })
 onUnmounted(() => {
   isUnmounted = true
   pendingCommand = null
   pendingCommandId = null
   if (statusWs) {
-    if (statusWs._laserStatusCallback) {
-      statusWs.off('STATUS_UPDATE', statusWs._laserStatusCallback)
-      statusWs._laserStatusCallback = null
-    }
-    if (statusWs._commandFeedbackCallback) {
-      statusWs.off('COMMAND_FEEDBACK', statusWs._commandFeedbackCallback)
-      statusWs._commandFeedbackCallback = null
-    }
+    if (statusWs._laserStatusCallback) { statusWs.off('STATUS_UPDATE', statusWs._laserStatusCallback); statusWs._laserStatusCallback = null }
+    if (statusWs._commandFeedbackCallback) { statusWs.off('COMMAND_FEEDBACK', statusWs._commandFeedbackCallback); statusWs._commandFeedbackCallback = null }
     statusWs = null
   }
 })
@@ -733,24 +568,25 @@ onUnmounted(() => {
 
 <style scoped>
 .laser-control-page {
-  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  min-height: 100vh;
-  background: var(--app-background);
+  gap: 16px;
+}
+
+.laser-control-page :deep(.el-row) {
+  min-height: 100%;
+}
+
+.laser-control-page :deep(.el-col) {
+  display: flex;
+  flex-direction: column;
 }
 
 .status-card,
 .command-card {
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   padding: 24px;
   overflow: hidden;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.05);
 }
 
 .card-header {
@@ -759,30 +595,107 @@ onUnmounted(() => {
   font-weight: 500;
   font-size: 17px;
   color: var(--text-primary);
-  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+}
+
+.card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  font-size: 17px;
+  color: var(--text-primary);
   margin-bottom: 24px;
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  letter-spacing: -0.2px;
-  font-family: var(--font-family);
 }
 
 .status-text {
   font-weight: 500;
   color: var(--text-secondary);
   font-size: 15px;
-  font-family: var(--font-family);
 }
 
 .stat-value {
   font-weight: 600;
   color: var(--primary-color);
   font-size: 15px;
-  font-family: var(--font-family);
 }
+
+/* ── 自定义指令按钮组 ──────────────────────────── */
+.btn-group-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 580px;
+}
+
+.action-btn-row {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  flex: 1;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid rgba(89, 214, 255, 0.25);
+  background: rgba(11, 29, 49, 0.8);
+  color: rgba(237, 245, 255, 0.9);
+  transition: all 0.22s ease;
+  outline: none;
+  user-select: none;
+  height: 44px;
+}
+
+.action-btn:hover:not(.disabled) {
+  background: rgba(26, 68, 112, 0.85);
+  border-color: rgba(89, 214, 255, 0.5);
+  color: #fff;
+}
+
+.action-btn.active {
+  background: linear-gradient(135deg, rgba(47, 115, 255, 0.65) 0%, rgba(89, 214, 255, 0.55) 100%);
+  border-color: rgba(89, 214, 255, 0.85);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(47, 115, 255, 0.45);
+}
+
+.action-btn--danger {
+  border-color: rgba(255, 93, 93, 0.5);
+  background: rgba(192, 59, 59, 0.25);
+  color: #ff9999;
+}
+.action-btn--danger:hover:not(.disabled) {
+  background: rgba(192, 59, 59, 0.4);
+  border-color: rgba(255, 93, 93, 0.75);
+  color: #fff;
+}
+
+.action-btn.disabled,
+.action-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none;
+}
+/* ─────────────────────────────────────────────── */
 
 .params-group {
   margin-bottom: 24px;
+}
+
+.laser-control-page :deep(.param-input) {
+  width: 100% !important;
 }
 
 .submit-area {
@@ -791,27 +704,15 @@ onUnmounted(() => {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* 固定描述列表列宽，防止数据更新时布局跳动 */
-.fixed-width-descriptions {
-  .el-descriptions__cell {
-    width: fit-content !important;
-    padding-top: 16px;
-    padding-bottom: 16px;
-    color: var(--text-primary);
-    font-family: var(--font-family);
-  }
-  
-  .el-descriptions__label {
-    color: var(--text-secondary) !important;
-    font-family: var(--font-family);
-  }
-}
-
-.info-value {
-  font-size: 15px;
+/* 描述列表 */
+.fixed-width-descriptions :deep(.el-descriptions__cell) {
+  width: fit-content !important;
+  padding-top: 16px;
+  padding-bottom: 16px;
   color: var(--text-primary);
-  font-weight: 500;
-  font-family: var(--font-family);
+}
+.fixed-width-descriptions :deep(.el-descriptions__label) {
+  color: var(--text-secondary) !important;
 }
 
 /* 指令执行状态反馈 */
@@ -824,206 +725,173 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   margin-bottom: 20px;
-
-  &.pending {
-    background: rgba(64, 158, 255, 0.1);
-    border-color: rgba(64, 158, 255, 0.2);
-    .status-title { color: var(--primary-color); }
-  }
-
-  &.success {
-    background: rgba(64, 158, 255, 0.1);
-    border-color: rgba(64, 158, 255, 0.2);
-    .status-title { color: var(--primary-color); }
-  }
-
-  &.error {
-    background: rgba(64, 158, 255, 0.1);
-    border-color: rgba(64, 158, 255, 0.2);
-    .status-title { color: var(--primary-color); }
-  }
 }
+
+.command-status-feedback.pending {
+  background: rgba(64, 158, 255, 0.1);
+  border-color: rgba(64, 158, 255, 0.2);
+}
+.command-status-feedback.pending .status-title { color: var(--accent-cyan); }
+
+.command-status-feedback.success {
+  background: rgba(57, 211, 152, 0.08);
+  border-color: rgba(57, 211, 152, 0.25);
+}
+.command-status-feedback.success .status-title { color: var(--accent-green); }
+
+.command-status-feedback.error {
+  background: rgba(255, 93, 93, 0.08);
+  border-color: rgba(255, 93, 93, 0.25);
+}
+.command-status-feedback.error .status-title { color: var(--accent-red); }
 
 .status-icon {
   font-size: 28px;
   flex-shrink: 0;
   margin-top: 2px;
-
-  &.pending {
-    color: var(--primary-color);
-    animation: spin 1s linear infinite;
-  }
-  &.success { color: var(--primary-color); }
-  &.error { color: var(--primary-color); }
 }
+.status-icon.pending { color: var(--accent-cyan); animation: spin 1s linear infinite; }
+.status-icon.success { color: var(--accent-green); }
+.status-icon.error   { color: var(--accent-red); }
 
-.status-content {
-  flex: 1;
-}
+.status-content { flex: 1; }
+.status-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+.status-desc  { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
+.status-time  { font-size: 13px; color: var(--text-tertiary); }
 
-.status-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  font-family: var(--font-family);
-}
-
-.status-desc {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
-  font-family: var(--font-family);
-}
-
-.status-time {
-  font-size: 13px;
-  color: var(--text-tertiary);
-  font-family: var(--font-family);
-}
-
-/* 自定义表单样式 */
+/* 表单 label */
 .laser-control-page :deep(.el-form-item__label) {
   color: var(--text-secondary);
-  font-family: var(--font-family);
+  font-size: 15px;
+  font-weight: 500;
+  padding-right: 20px !important;
+}
+
+.laser-control-page :deep(.el-form-item) {
+  margin-bottom: 22px;
+}
+
+/* ── 数字输入框 ──────────────────────────── */
+.laser-control-page :deep(.el-input-number) {
+  width: 100%;
+}
+.laser-control-page :deep(.el-input-number .el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(99, 195, 255, 0.14) !important;
+  box-shadow: none !important;
+  border-radius: 12px !important;
+}
+.laser-control-page :deep(.el-input-number .el-input__wrapper:hover) {
+  border-color: rgba(99, 195, 255, 0.3) !important;
+}
+.laser-control-page :deep(.el-input-number .el-input__wrapper.is-focus) {
+  border-color: rgba(89, 214, 255, 0.5) !important;
+  box-shadow: 0 0 0 1px rgba(89, 214, 255, 0.2) inset !important;
+}
+.laser-control-page :deep(.el-input-number .el-input__inner) {
+  color: var(--text-primary) !important;
+  background: transparent !important;
+  text-align: center;
   font-size: 14px;
   font-weight: 500;
 }
-
 .laser-control-page :deep(.el-input-number__decrease),
 .laser-control-page :deep(.el-input-number__increase) {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: transparent !important;
+  border-color: rgba(99, 195, 255, 0.1) !important;
   color: var(--text-secondary);
+  box-shadow: none !important;
 }
-
-.laser-control-page :deep(.el-input__inner) {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
-  font-family: var(--font-family);
+.laser-control-page :deep(.el-input-number__decrease:hover),
+.laser-control-page :deep(.el-input-number__increase:hover) {
+  background: rgba(89, 214, 255, 0.1) !important;
+  color: var(--accent-cyan) !important;
 }
-
-.laser-control-page :deep(.el-input__inner:focus) {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+.laser-control-page :deep(.el-input-number__decrease:disabled),
+.laser-control-page :deep(.el-input-number__increase:disabled) {
+  color: var(--text-tertiary);
+  background: transparent !important;
 }
+/* ─────────────────────────────────────────────── */
 
-/* 自定义分割线样式 */
+/* 分割线 */
 .laser-control-page :deep(.el-divider__text) {
   color: var(--text-secondary);
-  font-family: var(--font-family);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   padding: 0 12px;
   background: transparent !important;
-  border: none !important;
 }
-
 .laser-control-page :deep(.el-divider) {
-  border-color: rgba(255, 255, 255, 0.1);
-  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
-/* 自定义alert样式，使其与深色主题协调 */
+/* Alert */
 .laser-control-page :deep(.el-alert) {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
   border-radius: 12px;
   margin-bottom: 16px;
 }
-
 .laser-control-page :deep(.el-alert__title) {
   color: var(--text-primary);
-  font-family: var(--font-family);
   font-size: 14px;
 }
-
-.laser-control-page :deep(.el-alert__description) {
-  color: var(--text-secondary);
-  font-family: var(--font-family);
-  font-size: 13px;
-}
-
 .laser-control-page :deep(.el-alert--info) {
-  background: rgba(64, 158, 255, 0.1);
-  border-color: rgba(64, 158, 255, 0.2);
+  background: rgba(47, 115, 255, 0.08);
+  border-color: rgba(47, 115, 255, 0.2);
 }
-
 .laser-control-page :deep(.el-alert--success) {
-  background: rgba(64, 158, 255, 0.1);
-  border-color: rgba(64, 158, 255, 0.2);
+  background: rgba(57, 211, 152, 0.08);
+  border-color: rgba(57, 211, 152, 0.22);
 }
-
 .laser-control-page :deep(.el-alert--warning) {
-  background: rgba(64, 158, 255, 0.1);
-  border-color: rgba(64, 158, 255, 0.2);
+  background: rgba(255, 141, 67, 0.08);
+  border-color: rgba(255, 141, 67, 0.22);
 }
+.laser-control-page :deep(.el-alert--info .el-alert__icon)    { color: var(--accent-blue); }
+.laser-control-page :deep(.el-alert--success .el-alert__icon) { color: var(--accent-green); }
+.laser-control-page :deep(.el-alert--warning .el-alert__icon) { color: var(--accent-orange); }
 
-.laser-control-page :deep(.el-alert__icon) {
-  color: var(--primary-color);
+/* 发送指令按钮 */
+.laser-control-page :deep(.el-button) {
+  border-radius: 10px !important;
+  font-weight: 500 !important;
+  transition: all 0.22s ease !important;
+  border: 1px solid rgba(89, 214, 255, 0.35) !important;
+  background: rgba(11, 29, 49, 0.85) !important;
+  color: rgba(237, 245, 255, 0.95) !important;
+}
+.laser-control-page :deep(.el-button:hover) {
+  background: rgba(26, 68, 112, 0.9) !important;
+  border-color: rgba(89, 214, 255, 0.6) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 18px rgba(47, 115, 255, 0.35) !important;
+}
+.laser-control-page :deep(.el-button--primary) {
+  background: linear-gradient(135deg, rgba(47, 115, 255, 0.75) 0%, rgba(89, 214, 255, 0.65) 100%) !important;
+  border-color: rgba(89, 214, 255, 0.85) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 22px rgba(47, 115, 255, 0.5) !important;
+}
+.laser-control-page :deep(.el-button--primary:hover) {
+  background: linear-gradient(135deg, rgba(47, 115, 255, 0.85) 0%, rgba(89, 214, 255, 0.75) 100%) !important;
+  border-color: rgba(89, 214, 255, 0.95) !important;
+  box-shadow: 0 8px 26px rgba(47, 115, 255, 0.55) !important;
+}
+.laser-control-page :deep(.el-button:disabled) {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
 }
 
 @keyframes spin {
   from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  to   { transform: rotate(360deg); }
 }
 
-/* 响应式调整 */
 @media (max-width: 768px) {
-  .laser-control-page {
-    padding: 16px;
-    gap: 20px;
-  }
-  
-  .status-card,
-  .command-card {
-    padding: 20px;
-  }
-  
-  .card-header {
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-  }
-  
-  .command-status-feedback {
-    padding: 16px 20px;
-  }
-  
-  .submit-area {
-    margin-top: 28px;
-    padding-top: 24px;
-  }
-}
-
-/* 自定义按钮样式 */
-.laser-control-page :deep(.el-button) {
-  border-radius: 12px !important;
-  font-family: var(--font-family) !important;
-  font-weight: 500 !important;
-  transition: all 0.3s ease !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-.laser-control-page :deep(.el-button--primary),
-.laser-control-page :deep(.el-button--success),
-.laser-control-page :deep(.el-button--danger) {
-  background: var(--primary-color) !important;
-  border-color: var(--primary-color) !important;
-  color: white !important;
-}
-
-.laser-control-page :deep(.el-button--default) {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  color: var(--text-primary) !important;
-}
-
-.laser-control-page :deep(.el-button:disabled) {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  color: var(--text-tertiary) !important;
-  cursor: not-allowed !important;
+  .status-card, .command-card { padding: 20px; }
+  .card-header { margin-bottom: 20px; }
+  .command-status-feedback { padding: 16px 20px; }
+  .submit-area { margin-top: 28px; padding-top: 24px; }
 }
 </style>

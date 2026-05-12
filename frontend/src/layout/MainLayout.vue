@@ -111,7 +111,7 @@ async function handleLogout() {
 <style scoped>
 .layout-shell {
   display: grid;
-  grid-template-columns: 268px minmax(0, 1fr);
+  grid-template-columns: 210px minmax(0, 1fr);
   gap: 16px;
   height: 100vh;
   padding: 16px;
@@ -239,7 +239,7 @@ async function handleLogout() {
 .content-inner {
   height: 100%;
   overflow: auto;
-  padding-right: 2px;
+  padding: 16px;
 }
 
 @media (max-width: 1180px) {
@@ -249,6 +249,12 @@ async function handleLogout() {
 
   .sidebar {
     display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .content-inner {
+    padding: 12px;
   }
 }
 </style>

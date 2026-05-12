@@ -4,9 +4,18 @@
       <div class="card-header">
         <span>机器人轨迹地图</span>
         <div class="header-actions">
-          <el-button v-if="!isFullscreen" :icon="FullScreen" @click="toggleFullscreen" size="small" text>全屏</el-button>
-          <el-button v-else :icon="Fold" @click="toggleFullscreen" size="small" text>退出全屏</el-button>
-          <el-button :icon="Refresh" @click="loadTrajectory" :loading="loading" size="small" text>刷新</el-button>
+          <el-button v-if="filteredPoints.length > 0" type="primary" size="small" @click="exportTrajectoryJSON">
+            <el-icon><Download /></el-icon>
+            导出 JSON
+          </el-button>
+          <el-button v-if="filteredPoints.length > 0" type="success" size="small" @click="exportTrajectoryCSV">
+            <el-icon><Download /></el-icon>
+            导出 CSV
+          </el-button>
+          <el-button v-if="filteredPoints.length > 0" type="primary" size="small" @click="exportMapImage">
+            <el-icon><Download /></el-icon>
+            导出地图图片
+          </el-button>
         </div>
       </div>
 
@@ -55,6 +64,22 @@
           </el-form-item>
           <el-form-item>
             <el-button @click="resetQuery">重置</el-button>
+            <el-button v-if="!isFullscreen" :icon="FullScreen" @click="toggleFullscreen">全屏</el-button>
+            <el-button v-else :icon="Fold" @click="toggleFullscreen">退出全屏</el-button>
+          </el-form-item>
+          <el-form-item>
+            <el-button-group size="small">
+              <el-button :type="currentLayer === 'normal' ? 'primary' : 'default'" @click="currentLayer = 'normal'; changeMapLayer()">
+                标准
+              </el-button>
+              <el-button :type="currentLayer === 'satellite' ? 'primary' : 'default'" @click="currentLayer = 'satellite'; changeMapLayer()">
+                卫星
+              </el-button>
+            </el-button-group>
+          </el-form-item>
+          <el-form-item class="point-toggle-form">
+            <span>显示轨迹点</span>
+            <el-switch v-model="showPoints" @change="togglePointsVisibility" />
           </el-form-item>
         </el-form>
         <div v-if="timeErrorMsg" class="time-error">
@@ -77,48 +102,28 @@
             </div>
           </div>
 
-          <!-- 回放控件 -->
-          <div v-if="filteredPoints.length > 0" class="playback-controls">
-            <div class="playback-left">
-              <el-button :type="isPlaying ? 'warning' : 'primary'" size="small" @click="togglePlayPause">
-                <el-icon v-if="!isPlaying"><VideoPlay /></el-icon>
-                <el-icon v-else><VideoPause /></el-icon>
-                {{ isPlaying ? '暂停' : '回放' }}
-              </el-button>
-              <el-select v-model="playbackSpeed" size="small" style="width: 70px; margin-left: 8px" @change="updatePlaybackSpeed">
-                <el-option label="0.5x" value="0.5"></el-option>
-                <el-option label="1x" value="1"></el-option>
-                <el-option label="2x" value="2"></el-option>
-                <el-option label="4x" value="4"></el-option>
-              </el-select>
-            </div>
-            <div class="playback-progress">
-              <el-slider v-model="playbackProgress" :min="0" :max="100" @input="seekToProgress"></el-slider>
-            </div>
-            <span class="playback-time">{{ currentPlaybackTime }} / {{ totalDuration }}</span>
-          </div>
-
-          <!-- 图层切换 -->
-          <div class="map-layer-switch">
-            <el-radio-group v-model="currentLayer" size="small" @change="changeMapLayer">
-              <el-radio-button value="normal">标准</el-radio-button>
-              <el-radio-button value="satellite">卫星</el-radio-button>
-            </el-radio-group>
-          </div>
-
-          <!-- 显示/隐藏轨迹点开关 -->
-          <div class="point-toggle">
-            <span>显示轨迹点</span>
-            <el-switch v-model="showPoints" @change="togglePointsVisibility" />
-          </div>
         </div>
       </div>
 
-      <!-- 导出按钮 -->
-      <div class="actions-bar" v-if="filteredPoints.length > 0">
-        <el-button size="small" @click="exportTrajectoryJSON">导出 JSON</el-button>
-        <el-button size="small" @click="exportTrajectoryCSV">导出 CSV</el-button>
-        <el-button size="small" @click="exportMapImage">导出地图图片</el-button>
+      <!-- 回放控件 -->
+      <div v-if="filteredPoints.length > 0" class="playback-controls">
+        <div class="playback-left">
+          <el-button :type="isPlaying ? 'warning' : 'primary'" size="small" @click="togglePlayPause">
+            <el-icon v-if="!isPlaying"><VideoPlay /></el-icon>
+            <el-icon v-else><VideoPause /></el-icon>
+            {{ isPlaying ? '暂停' : '回放' }}
+          </el-button>
+          <el-select v-model="playbackSpeed" size="small" style="width: 70px; margin-left: 8px" @change="updatePlaybackSpeed">
+            <el-option label="0.5x" value="0.5x"></el-option>
+            <el-option label="1x" value="1x"></el-option>
+            <el-option label="2x" value="2x"></el-option>
+            <el-option label="4x" value="4x"></el-option>
+          </el-select>
+        </div>
+        <div class="playback-progress">
+          <el-slider v-model="playbackProgress" :min="0" :max="100" @input="seekToProgress"></el-slider>
+        </div>
+        <span class="playback-time">{{ currentPlaybackTime }} / {{ totalDuration }}</span>
       </div>
 
       <!-- 提示信息 -->
@@ -131,21 +136,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import {
   Loading,
   Warning,
-  Refresh,
   FullScreen,
   Fold,
   Location,
   InfoFilled,
   VideoPlay,
-  VideoPause
+  VideoPause,
+  Download
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getTrajectory } from '@/api/robot'
-import html2canvas from 'html2canvas'
 
 // 快捷时间选项
 const quickOptions = [
@@ -175,7 +179,7 @@ const currentLayer = ref('normal')
 
 // 回放相关
 const isPlaying = ref(false)
-const playbackSpeed = ref(1)
+const playbackSpeed = ref('1x')
 const playbackProgress = ref(0)
 let playbackTimer = null
 let playbackMarker = null
@@ -310,14 +314,16 @@ function validateTimeRange() {
 // 全屏切换
 function toggleFullscreen() {
   isFullscreen.value = !isFullscreen.value
-  setTimeout(() => {
-    if (map) {
-      map.invalidateSize()
-      if (filteredPoints.value.length > 0) {
-        fitMapToTrajectory()
+  nextTick(() => {
+    setTimeout(() => {
+      if (map) {
+        map.invalidateSize(true)
+        if (filteredPoints.value.length > 0) {
+          fitMapToTrajectory()
+        }
       }
-    }
-  }, 300)
+    }, 350)
+  })
 }
 
 // 按下ESC键退出全屏
@@ -336,7 +342,12 @@ async function loadTrajectory() {
     const res = await getTrajectory(queryForm.value.startTime, queryForm.value.endTime)
     if (res.code === 200) {
       points.value = res.data.points || []
-      filterOutliers()
+      if (points.value.length === 0) {
+        ElMessage.warning('所选时间范围内没有轨迹数据')
+      } else {
+        filterOutliers()
+        ElMessage.success(`查询完成，共找到 ${points.value.length} 个轨迹点，有效轨迹点 ${filteredPoints.value.length} 个`)
+      }
       updateMap()
       calculateStats()
       stopPlayback()
@@ -593,7 +604,8 @@ function updateMap() {
       if (!prevPoint) continue
       
       const color = getSegmentColor(filteredPoints.value[i - 1])
-      
+
+
       if (color === currentColor) {
         // 颜色相同，继续添加到当前路径
         currentPath.push(point)
@@ -908,16 +920,16 @@ function changeMapLayer() {
     tileLayer = L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=6&x={x}&y={y}&z={z}', {
       attribution: '&copy; <a href="https://www.amap.com/">高德地图</a>',
       subdomains: ['1', '2', '3', '4'],
-      maxNativeZoom: 18,  // 关键：瓦片服务的实际最大级别
-      maxZoom: 22         // 允许地图缩放控件的上限，超出部分会自动拉伸
+      maxNativeZoom: 18,
+      maxZoom: 22
     })
   } else {
     // 高德地图标准图层
     tileLayer = L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
       attribution: '&copy; <a href="https://www.amap.com/">高德地图</a>',
       subdomains: ['1', '2', '3', '4'],
-      maxNativeZoom: 18,  // 关键：瓦片服务的实际最大级别
-      maxZoom: 22         // 允许地图缩放控件的上限，超出部分会自动拉伸
+      maxNativeZoom: 18,
+      maxZoom: 22
     })
   }
 
@@ -1352,35 +1364,274 @@ function exportTrajectoryCSV() {
 }
 
 async function exportMapImage() {
-  const mapContainer = document.getElementById('trajectory-map')
-  if (!mapContainer) {
-    ElMessage.error('找不到地图容器')
+  if (!map || filteredPoints.value.length === 0) {
+    ElMessage.warning('暂无轨迹数据可导出')
     return
   }
 
+  ElMessage.info('正在生成轨迹图片，请稍候...')
+
   try {
-    // 使用 html2canvas 捕获地图容器
-    const canvas = await html2canvas(mapContainer, {
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      scale: 2 // 提高清晰度
+    const mapContainer = document.getElementById('trajectory-map')
+    const rect = mapContainer.getBoundingClientRect()
+    const W = rect.width
+    const H = rect.height
+
+    const canvas = document.createElement('canvas')
+    canvas.width = W * 2
+    canvas.height = H * 2
+    const ctx = canvas.getContext('2d')
+    ctx.scale(2, 2)
+
+    ctx.fillStyle = '#f5f5f5'
+    ctx.fillRect(0, 0, W, H)
+
+    const bounds = map.getBounds()
+    const zoom = map.getZoom()
+
+    await drawMapTiles(ctx, bounds, zoom, W, H)
+
+    await drawTrajectoryOnCanvas(ctx, bounds, W, H)
+
+    const dataUrl = canvas.toDataURL('image/png', 0.95)
+    const link = document.createElement('a')
+    link.download = `轨迹截图_${new Date().toISOString().slice(0, 10)}.png`
+    link.href = dataUrl
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    ElMessage.success('轨迹图片导出成功')
+
+  } catch (err) {
+    console.error('导出失败', err)
+    ElMessage.error('导出失败：' + err.message)
+  }
+}
+
+async function drawMapTiles(ctx, bounds, zoom, W, H) {
+  const tileSize = 256
+
+  const sw = bounds.getSouthWest()
+  const ne = bounds.getNorthEast()
+  const minLat = sw.lat
+  const maxLat = ne.lat
+  const minLng = sw.lng
+  const maxLng = ne.lng
+
+  const swTile = latLngToTile(sw.lat, sw.lng, zoom)
+  const neTile = latLngToTile(ne.lat, ne.lng, zoom)
+
+  const latRange = maxLat - minLat
+  const lngRange = maxLng - minLng
+
+  function project(lat, lng) {
+    const x = ((lng - minLng) / lngRange) * W
+    const y = H - ((lat - minLat) / latRange) * H
+    return [x, y]
+  }
+
+  const tiles = []
+  for (let ty = neTile.y; ty <= swTile.y; ty++) {
+    for (let tx = swTile.x; tx <= neTile.x; tx++) {
+      tiles.push({ x: tx, y: ty })
+    }
+  }
+
+  for (const tile of tiles) {
+    try {
+      const url = getTileUrl(tile.x, tile.y, zoom)
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      await new Promise((resolve) => {
+        img.onload = resolve
+        img.onerror = resolve
+        img.src = url
+      })
+
+      if (img.width > 0) {
+        const tileLat = tileToLat(tile.y, zoom)
+        const tileLng = tileToLng(tile.x, zoom)
+        
+        const tileCornerLat = tileToLat(tile.y + 1, zoom)
+        const tileCornerLng = tileToLng(tile.x + 1, zoom)
+
+        const [x1, y1] = project(tileLat, tileLng)
+        const [x2, y2] = project(tileCornerLat, tileCornerLng)
+        
+        const tileCanvasWidth = Math.abs(x2 - x1)
+        const tileCanvasHeight = Math.abs(y2 - y1)
+
+        ctx.drawImage(img, x1, y1, tileCanvasWidth, tileCanvasHeight)
+      }
+    } catch (e) {
+      console.log('Tile load failed')
+    }
+  }
+}
+
+function tileToLat(y, zoom) {
+  const n = Math.pow(2, zoom)
+  const rad = Math.atan(Math.sinh(Math.PI - (2 * Math.PI * y) / n))
+  return rad * 180 / Math.PI
+}
+
+function tileToLng(x, zoom) {
+  const n = Math.pow(2, zoom)
+  return (x / n) * 360 - 180
+}
+
+function latLngToTile(lat, lng, zoom) {
+  const n = Math.pow(2, zoom)
+  const x = Math.floor((lng + 180) / 360 * n)
+  const rad = lat * Math.PI / 180
+  const y = Math.floor((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2 * n)
+  return { x, y }
+}
+
+function getTileUrl(x, y, zoom) {
+  const subdomain = '1234'[Math.abs(x + y) % 4]
+  if (currentLayer.value === 'satellite') {
+    return `https://webst0${subdomain}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=6&x=${x}&y=${y}&z=${zoom}`
+  }
+  return `https://webrd0${subdomain}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x=${x}&y=${y}&z=${zoom}`
+}
+
+async function drawTrajectoryOnCanvas(ctx, bounds, W, H) {
+  const sw = bounds.getSouthWest()
+  const ne = bounds.getNorthEast()
+  const minLat = sw.lat
+  const maxLat = ne.lat
+  const minLng = sw.lng
+  const maxLng = ne.lng
+
+  const latRange = maxLat - minLat
+  const lngRange = maxLng - minLng
+
+  function project(lat, lng) {
+    const x = ((lng - minLng) / lngRange) * W
+    const y = H - ((lat - minLat) / latRange) * H
+    return [x, y]
+  }
+
+  ctx.lineWidth = 4
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+
+  let currentPoints = []
+  let currentColor = null
+  for (let i = 0; i < filteredPoints.value.length; i++) {
+    const p = filteredPoints.value[i]
+    const ll = toLatLng(p)
+    if (!ll) continue
+    const color = getSegmentColor(p)
+
+    if (i === 0) {
+      currentColor = color
+      currentPoints = [ll]
+    } else {
+      if (color === currentColor) {
+        currentPoints.push(ll)
+      } else {
+        ctx.strokeStyle = currentColor
+        ctx.beginPath()
+        currentPoints.forEach((pt, idx) => {
+          const [x, y] = project(pt[0], pt[1])
+          if (idx === 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+        })
+        ctx.stroke()
+
+        currentColor = color
+        currentPoints = [ll]
+      }
+    }
+  }
+  if (currentPoints.length > 0) {
+    ctx.strokeStyle = currentColor
+    ctx.beginPath()
+    currentPoints.forEach((pt, idx) => {
+      const [x, y] = project(pt[0], pt[1])
+      if (idx === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    })
+    ctx.stroke()
+  }
+
+  if (showPoints.value) {
+    const total = filteredPoints.value.length
+    const step = total < 200 ? 1 : total < 500 ? 2 : 4
+    filteredPoints.value.forEach((p, i) => {
+      if (i % step !== 0) return
+      const ll = toLatLng(p)
+      if (!ll) return
+      const [x, y] = project(ll[0], ll[1])
+      const color = getSegmentColor(p)
+
+      ctx.beginPath()
+      ctx.arc(x, y, 3, 0, Math.PI * 2)
+      ctx.fillStyle = color
+      ctx.strokeStyle = '#fff'
+      ctx.lineWidth = 1
+      ctx.fill()
+      ctx.stroke()
+    })
+  }
+
+  function drawMarker(lat, lng, label, bg) {
+    const [x, y] = project(lat, lng)
+    ctx.beginPath()
+    ctx.arc(x, y, 14, 0, Math.PI * 2)
+    ctx.fillStyle = bg
+    ctx.fill()
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 3
+    ctx.stroke()
+
+    ctx.fillStyle = '#fff'
+    ctx.font = 'bold 16px Arial'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(label, x, y)
+  }
+
+  const startPt = toLatLng(filteredPoints.value[0])
+  const endPt = toLatLng(filteredPoints.value[filteredPoints.value.length - 1])
+  if (startPt) drawMarker(startPt[0], startPt[1], 'S', '#67c23a')
+  if (endPt) drawMarker(endPt[0], endPt[1], 'E', '#f56c6c')
+}
+
+function waitForTilesLoaded() {
+  return new Promise((resolve) => {
+    if (!map) {
+      resolve()
+      return
+    }
+    
+    const tileLayers = []
+    map.eachLayer((layer) => {
+      if (layer instanceof L.TileLayer) {
+        tileLayers.push(layer)
+      }
     })
 
-    // 转换为 blob 并下载
-    canvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.download = `trajectory-map-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png`
-      a.href = url
-      a.click()
-      URL.revokeObjectURL(url)
-      ElMessage.success('地图图片导出成功')
-    }, 'image/png', 0.95)
-  } catch (error) {
-    console.error('导出地图图片失败:', error)
-    ElMessage.error('导出失败: ' + error.message)
-  }
+    if (tileLayers.length === 0) {
+      resolve()
+      return
+    }
+
+    let loadedCount = 0
+    const checkComplete = () => {
+      loadedCount++
+      if (loadedCount >= tileLayers.length) {
+        setTimeout(resolve, 500)
+      }
+    }
+
+    tileLayers.forEach((tileLayer) => {
+      tileLayer.on('load', checkComplete)
+      setTimeout(checkComplete, 3000)
+    })
+  })
 }
 
 onMounted(() => {
@@ -1430,7 +1681,7 @@ function initMap() {
     zoom: 13,
     zoomControl: true,
     minZoom: 1,
-    maxZoom: 18 // 改成18，不能超过瓦片实际最大级别
+    maxZoom: 18
   })
 
   // 添加瓦片图层 - 使用国内可访问的瓦片
@@ -1439,16 +1690,16 @@ function initMap() {
     tileLayer = L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=6&x={x}&y={y}&z={z}', {
       attribution: '&copy; <a href="https://www.amap.com/">高德地图</a>',
       subdomains: ['1', '2', '3', '4'],
-      maxNativeZoom: 18,  // 关键：瓦片服务的实际最大级别
-      maxZoom: 22         // 允许地图缩放控件的上限，超出部分会自动拉伸
+      maxNativeZoom: 18,
+      maxZoom: 22
     })
   } else {
     // 高德地图标准图层
     tileLayer = L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
       attribution: '&copy; <a href="https://www.amap.com/">高德地图</a>',
       subdomains: ['1', '2', '3', '4'],
-      maxNativeZoom: 18,  // 关键：瓦片服务的实际最大级别
-      maxZoom: 22         // 允许地图缩放控件的上限，超出部分会自动拉伸
+      maxNativeZoom: 18,
+      maxZoom: 22
     })
   }
   tileLayer.addTo(map)
@@ -1466,23 +1717,15 @@ function initMap() {
 
 <style scoped>
 .trajectory-page {
-  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  min-height: 100vh;
-  background: var(--app-background);
+  gap: 16px;
 }
 
 .main-card {
   padding: 24px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.05);
 }
 
 .card-header {
@@ -1527,14 +1770,15 @@ function initMap() {
 }
 
 .quick-select :deep(.el-button--primary) {
-  background: var(--primary-color) !important;
-  border-color: var(--primary-color) !important;
+  background: rgba(64, 158, 255, 0.3) !important;
+  border-color: rgba(64, 158, 255, 0.5) !important;
   color: white !important;
+  backdrop-filter: blur(10px) !important;
 }
 
 .quick-select :deep(.el-button--primary:hover) {
-  background: #66b1ff !important;
-  border-color: #66b1ff !important;
+  background: rgba(64, 158, 255, 0.4) !important;
+  border-color: rgba(64, 158, 255, 0.6) !important;
   color: white !important;
 }
 
@@ -1579,14 +1823,15 @@ function initMap() {
 }
 
 .filter-form :deep(.el-button--primary) {
-  background: var(--primary-color) !important;
-  border-color: var(--primary-color) !important;
+  background: rgba(64, 158, 255, 0.3) !important;
+  border-color: rgba(64, 158, 255, 0.5) !important;
   color: white !important;
+  backdrop-filter: blur(10px) !important;
 }
 
 .filter-form :deep(.el-button--primary:hover) {
-  background: #66b1ff !important;
-  border-color: #66b1ff !important;
+  background: rgba(64, 158, 255, 0.4) !important;
+  border-color: rgba(64, 158, 255, 0.6) !important;
   color: white !important;
 }
 
@@ -1598,6 +1843,7 @@ function initMap() {
 
 .map-wrapper {
   position: relative;
+  z-index: 1;
 }
 
 .map-wrapper.fullscreen {
@@ -1606,9 +1852,36 @@ function initMap() {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 9999;
-  background: white;
+  z-index: 1000;
+  background: var(--bg-app);
   padding: 20px;
+  overflow: auto;
+}
+
+/* 全屏时最外层卡片 */
+.trajectory-page:has(.map-wrapper.fullscreen) .main-card {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: var(--bg-app);
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 20px;
+  overflow: auto;
+}
+
+/* 全屏时卡片标题保持可见 */
+.trajectory-page:has(.map-wrapper.fullscreen) .card-header {
+  background: var(--bg-panel);
+  padding: 16px 24px;
+  margin-bottom: 16px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-panel);
 }
 
 .map-container {
@@ -1618,11 +1891,10 @@ function initMap() {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   overflow: hidden;
-  background: var(--app-background);
 }
 
 .map-wrapper.fullscreen .map-container {
-  height: calc(100vh - 120px);
+  height: calc(100vh - 100px);
 }
 
 .map-loading, .map-empty {
@@ -1660,150 +1932,120 @@ function initMap() {
   bottom: 20px;
   left: 20px;
   right: 20px;
-  background: rgba(30, 30, 30, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 16px 20px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px 20px;
   border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
   z-index: 1000;
   pointer-events: auto;
   color: white;
+  backdrop-filter: blur(16px);
 }
 
 .playback-left {
   display: flex;
   align-items: center;
+  gap: 10px;
 }
 
 .playback-progress {
   flex: 1;
-  margin: 0 16px;
+  margin: 0 12px;
 }
 
 .playback-time {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
+  color: #94a3b8;
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .playback-controls :deep(.el-button) {
-  background: rgba(255, 255, 255, 0.2) !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-  color: white !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e2e8f0 !important;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.25s ease;
 }
 
 .playback-controls :deep(.el-button:hover) {
-  background: rgba(255, 255, 255, 0.3) !important;
-  border-color: var(--primary-color) !important;
-  color: white !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(89, 214, 255, 0.4) !important;
+}
+
+.playback-controls :deep(.el-button--primary) {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.35), rgba(89, 214, 255, 0.25)) !important;
+  border-color: rgba(89, 214, 255, 0.5) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(89, 214, 255, 0.25);
+}
+
+.playback-controls :deep(.el-button--warning) {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.35), rgba(251, 191, 36, 0.25)) !important;
+  border-color: rgba(251, 191, 36, 0.5) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.25);
 }
 
 .playback-controls :deep(.el-select) {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  color: white !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e2e8f0 !important;
+  border-radius: 8px;
 }
 
 .playback-controls :deep(.el-select__input) {
-  color: white !important;
+  color: #e2e8f0 !important;
+  font-size: 13px;
 }
 
 .playback-controls :deep(.el-select__caret) {
-  color: rgba(255, 255, 255, 0.7) !important;
+  color: #94a3b8 !important;
+}
+
+.playback-controls :deep(.el-select-dropdown) {
+  background: rgba(15, 23, 42, 0.98) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.playback-controls :deep(.el-select-dropdown__item) {
+  color: #94a3b8 !important;
+}
+
+.playback-controls :deep(.el-select-dropdown__item.selected) {
+  background: rgba(64, 158, 255, 0.2) !important;
+  color: #ffffff !important;
 }
 
 .playback-controls :deep(.el-slider__runway) {
-  background-color: rgba(255, 255, 255, 0.5) !important;
-  height: 8px !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  height: 6px !important;
+  border-radius: 999px !important;
 }
 
 .playback-controls :deep(.el-slider__bar) {
-  background-color: var(--primary-color) !important;
-  height: 8px !important;
+  background: linear-gradient(90deg, rgba(64, 158, 255, 0.8), rgba(89, 214, 255, 0.6)) !important;
+  height: 6px !important;
+  border-radius: 999px !important;
 }
 
 .playback-controls :deep(.el-slider__button) {
-  border-color: var(--primary-color) !important;
-  width: 18px !important;
-  height: 18px !important;
+  border-color: rgba(89, 214, 255, 0.6) !important;
+  width: 16px !important;
+  height: 16px !important;
   margin-top: -5px !important;
-  background-color: white !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.4) !important;
+  border-radius: 50% !important;
 }
 
-/* 图层切换 */
-.map-layer-switch {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 6px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 10;
-}
-
-.map-layer-switch :deep(.el-radio-button__inner) {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  color: var(--text-secondary) !important;
-}
-
-.map-layer-switch :deep(.el-radio-button__orig-radio:checked + .el-radio-button__inner) {
-  background: var(--primary-color) !important;
-  border-color: var(--primary-color) !important;
-  color: white !important;
-}
-
-/* 轨迹点开关 */
-.point-toggle {
-  position: absolute;
-  top: 58px;
-  right: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 8px 12px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  z-index: 10;
-}
-
-.point-toggle :deep(.el-switch__core) {
-  background-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-.point-toggle :deep(.el-switch.is-checked .el-switch__core) {
-  background-color: var(--primary-color) !important;
-}
-
-.actions-bar {
-  margin-top: 16px;
-  display: flex;
-  gap: 12px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.actions-bar :deep(.el-button) {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  color: var(--text-primary) !important;
-}
-
-.actions-bar :deep(.el-button:hover) {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: var(--primary-color) !important;
-  color: var(--text-primary) !important;
-}
 
 .filter-info {
   margin-top: 16px;

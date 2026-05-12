@@ -223,8 +223,6 @@ watch(() => route.query.id, (newId) => {
 <style scoped>
 .detail-cards-container {
   padding: 20px;
-  min-height: 100vh;
-  background: var(--app-background);
 }
 
 .empty-state {
