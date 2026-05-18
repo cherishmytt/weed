@@ -1,0 +1,19 @@
+server:
+  port: 6080
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+  thymeleaf:
+    cache: false
+
+app:
+  model:
+    python-executable: C:\Python314/python.exe
+    script-path: c:/Users/20373/Desktop/1/newyolo/weed-stem-web/src/main/python/infer_weed_pose.py
+    weight-path: c:/Users/20373/Desktop/1/newyolo/runs/cnw_crop_weed_pose/weights/best.pt
+    output-root: c:/Users/20373/Desktop/1/newyolo/weed-stem-web/storage
+    classes: ""
+    imgsz: 640
